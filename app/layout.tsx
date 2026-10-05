@@ -2,14 +2,15 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "CONSITEC Commercial & Operational Panel",
-  description: "Internal management dashboard for training and certification services"
+  title: "CONSITEC | Gestión comercial",
+  description: "Panel de gestión comercial y operativa de Consitec"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body>{children}</body>
     </html>
   );
 }
+

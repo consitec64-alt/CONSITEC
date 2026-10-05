@@ -1,463 +1,138 @@
 "use client";
 
-import { translations } from "@/lib/translations";
-import { useEffect, useMemo, useState } from "react";
-import { addMonths, format } from "date-fns";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { format, getDaysInMonth } from "date-fns";
+import { es } from "date-fns/locale";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { LayoutDashboard, CalendarDays, Award, TrendingUp, Database, Search, Plus, RefreshCw, ChevronLeft, ChevronRight, X, Trash2, CheckCircle2, AlertCircle, Menu, BriefcaseBusiness, Wallet, Users, GraduationCap } from "lucide-react";
 
 type Meta = { id: string; name?: string; department?: string; district?: string };
-
-type Service = {
-  id: string;
-  company: string;
-  amount: string;
-  serviceDate: string;
-  certificatesOnly: boolean;
-  status: "SCHEDULED" | "EXECUTED" | "INVOICED" | "PAID";
-  course: { name: string };
-  instructor: { name: string };
-  location: { department: string; district: string };
-  salesperson: { id: string; name: string };
-};
-
-type Sale = {
-  id: string;
-  customerName: string;
-  customerType: "NATURAL_PERSON" | "COMPANY";
-  amount: string;
-  saleDate: string;
-  status: string;
-  course: { name: string };
-  salesperson: { name: string };
-};
+type Service = { id: string; company: string; amount: string; serviceDate: string; certificatesOnly: boolean; status: string; course: Meta; instructor: Meta | null; location: Meta | null; salesperson: Meta };
+type Sale = { id: string; customerName: string; customerType: string; amount: string; saleDate: string; status: string; course: Meta; salesperson: Meta };
+type DashboardData = { totalServices?: number; totalEstimatedBilling?: number; topSalesRep?: string; bestSellingCourse?: string; bySalesperson: Record<string, number>; byWeek: Record<string, number>; weeklyMatrix: Record<string, Record<string, number>>; ranking: [string, number][] };
+type Metadata = { instructors: Meta[]; courses: Meta[]; salespeople: Meta[]; locations: Meta[] };
+type Tab = "summary" | "services" | "certificates" | "performance" | "support";
+const tabs = [{ id: "summary", label: "Vista general", icon: LayoutDashboard }, { id: "services", label: "Agenda de servicios", icon: CalendarDays }, { id: "certificates", label: "Venta de certificados", icon: Award }, { id: "performance", label: "Rendimiento comercial", icon: TrendingUp }, { id: "support", label: "Base de soporte", icon: Database }] as const;
+const statuses: Record<string, string> = { SCHEDULED: "Programado", EXECUTED: "Ejecutado", INVOICED: "Facturado", PAID: "Pagado" };
+const money = (value: number | string) => new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }).format(Number(value));
+const dateLabel = (value: string) => format(new Date(value), "dd MMM", { locale: es });
+const emptyDashboard: DashboardData = { bySalesperson: {}, byWeek: {}, weeklyMatrix: {}, ranking: [] };
+async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(url, options);
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : data?.message || "No se pudo completar la operación. Inténtalo nuevamente.");
+  return data as T;
+}
+const post = (body: unknown): RequestInit => ({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 export default function Dashboard() {
-  const lang = "es";
-  const t = translations[lang];
-  
-  const now = new Date();
-  const [tab, setTab] = useState("summary");
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [year, setYear] = useState(now.getFullYear());
+  const [tab, setTab] = useState<Tab>("summary");
+  const [period, setPeriod] = useState(() => ({ month: new Date().getMonth() + 1, year: new Date().getFullYear() }));
   const [services, setServices] = useState<Service[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
-  const [dashboard, setDashboard] = useState<any>({ bySalesperson: {}, byWeek: {}, weeklyMatrix: {}, ranking: [] });
-  const [meta, setMeta] = useState<{ instructors: Meta[]; courses: Meta[]; salespeople: Meta[]; locations: Meta[] }>({ instructors: [], courses: [], salespeople: [], locations: [] });
-
-  const [serviceForm, setServiceForm] = useState({ company: "", courseId: "", instructorId: "", locationId: "", salespersonId: "", certificatesOnly: false, amount: "", serviceDate: format(now, "yyyy-MM-dd"), status: "SCHEDULED" });
-  const [saleForm, setSaleForm] = useState({ customerName: "", customerType: "NATURAL_PERSON", companyName: "", courseId: "", salespersonId: "", amount: "", saleDate: format(now, "yyyy-MM-dd"), status: "PAID" });
-  const [selectedDayServices, setSelectedDayServices] = useState<Service[] | null>(null);
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
-
-  async function load() {
-    const q = `month=${month}&year=${year}`;
-    const [s1, s2, s3, instructors, courses, salespeople, locations] = await Promise.all([
-      fetch(`/api/services?${q}`).then((r) => r.json()),
-      fetch(`/api/certificate-sales?${q}`).then((r) => r.json()),
-      fetch(`/api/dashboard?${q}`).then((r) => r.json()),
-      fetch(`/api/metadata/instructors`).then((r) => r.json()),
-      fetch(`/api/metadata/courses`).then((r) => r.json()),
-      fetch(`/api/metadata/salespeople`).then((r) => r.json()),
-      fetch(`/api/metadata/locations`).then((r) => r.json())
-    ]);
-    setServices(s1); setSales(s2); setDashboard(s3); setMeta({ instructors, courses, salespeople, locations });
+  const [dashboard, setDashboard] = useState<DashboardData>(emptyDashboard);
+  const [meta, setMeta] = useState<Metadata>({ instructors: [], courses: [], salespeople: [], locations: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
+  const [query, setQuery] = useState("");
+  const [rep, setRep] = useState("");
+  const [status, setStatus] = useState("");
+  const [mobileNav, setMobileNav] = useState(false);
+  const [modal, setModal] = useState<"service" | "sale" | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ url: string; label: string } | null>(null);
+  const loadVersion = useRef(0);
+  const announce = (text: string, error = false) => setNotice({ text, error });
+  const load = useCallback(async () => {
+    const version = ++loadVersion.current;
+    setLoading(true); setError("");
+    try {
+      const q = `month=${period.month}&year=${period.year}`;
+      const [s, c, d, instructors, courses, salespeople, locations] = await Promise.all([
+        request<Service[]>(`/api/services?${q}`), request<Sale[]>(`/api/certificate-sales?${q}`), request<DashboardData>(`/api/dashboard?${q}`),
+        request<Meta[]>("/api/metadata/instructors"), request<Meta[]>("/api/metadata/courses"), request<Meta[]>("/api/metadata/salespeople"), request<Meta[]>("/api/metadata/locations")
+      ]);
+      if (version !== loadVersion.current) return;
+      setServices(s); setSales(c); setDashboard(d); setMeta({ instructors, courses, salespeople, locations });
+    } catch (err) { if (version === loadVersion.current) setError(err instanceof Error ? err.message : "No se pudieron cargar los datos."); }
+    finally { if (version === loadVersion.current) setLoading(false); }
+  }, [period]);
+  useEffect(() => { const versionRef = loadVersion; void load(); return () => { versionRef.current++; }; }, [load]);
+  useEffect(() => { if (notice) { const timer = setTimeout(() => setNotice(null), 6000); return () => clearTimeout(timer); } }, [notice]);
+  useEffect(() => { setSelectedDay(null); }, [period]);
+  const search = query.trim().toLocaleLowerCase("es");
+  const visibleServices = services.filter(s => (!rep || s.salesperson.id === rep) && (!status || s.status === status) && (!search || [s.company, s.course?.name, s.salesperson?.name].some(v => v?.toLocaleLowerCase("es").includes(search))));
+  const visibleSales = sales.filter(s => (!rep || s.salesperson.id === rep) && (!status || s.status === status) && (!search || [s.customerName, s.course?.name, s.salesperson?.name].some(v => v?.toLocaleLowerCase("es").includes(search))));
+  const currentDate = new Date(period.year, period.month - 1, 1);
+  const periodLabel = format(currentDate, "MMMM yyyy", { locale: es });
+  const days = getDaysInMonth(currentDate);
+  const leadingDays = (currentDate.getDay() + 6) % 7;
+  const changeMonth = (delta: number) => { const date = new Date(period.year, period.month - 1 + delta, 1); setPeriod({ month: date.getMonth() + 1, year: date.getFullYear() }); };
+  async function saveRecord(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault(); if (busy) return;
+    const values = Object.fromEntries(new FormData(e.currentTarget));
+    const amount = Number(values.amount);
+    if (!Number.isFinite(amount) || amount <= 0) return announce("Ingresa un importe mayor a cero.", true);
+    setBusy(true);
+    try {
+      if (modal === "service") {
+        await request("/api/services", post({ ...values, amount, instructorId: values.instructorId || null, locationId: values.locationId || null, certificatesOnly: values.certificatesOnly === "on", serviceDate: `${values.serviceDate}T09:00:00.000Z` }));
+      } else {
+        await request("/api/certificate-sales", post({ ...values, amount, saleDate: `${values.saleDate}T09:00:00.000Z` }));
+        if (amount > 700) {
+          try { await request("/api/services", post({ company: values.customerName, courseId: values.courseId, salespersonId: values.salespersonId, instructorId: null, locationId: null, certificatesOnly: true, amount, serviceDate: `${values.saleDate}T09:00:00.000Z`, status: "SCHEDULED" })); }
+          catch { setModal(null); announce("La venta se guardó, pero no se pudo agregar a la agenda. Revisa la agenda antes de volver a registrarla.", true); await load(); return; }
+        }
+      }
+      setModal(null); announce("Registro guardado correctamente."); await load();
+    } catch (err) { announce(err instanceof Error ? err.message : "No se pudo guardar el registro.", true); }
+    finally { setBusy(false); }
   }
+  async function deleteRecord() {
+    if (!pendingDelete || busy) return;
+    setBusy(true);
+    try { await request(pendingDelete.url, { method: "DELETE" }); setPendingDelete(null); announce("Registro eliminado."); await load(); }
+    catch (err) { announce(err instanceof Error ? err.message : "No se pudo eliminar.", true); }
+    finally { setBusy(false); }
+  }
+  const openRecord = (kind: "service" | "sale") => { setSelectedDay(null); setModal(kind); };
+  const serviceCard = (s: Service) => <article key={s.id} className={`service-item ${s.certificatesOnly ? "certificate-item" : ""}`}><div className="split"><strong>{s.company}</strong><button className="icon-button danger" aria-label={`Eliminar servicio de ${s.company}`} onClick={() => { setSelectedDay(null); setPendingDelete({ url: `/api/services/${s.id}`, label: s.company }); }}><Trash2 size={14} /></button></div><span>{s.course?.name || "Sin curso"}</span><div className="split"><small>{s.salesperson?.name}</small><b>{money(s.amount)}</b></div><span className={`status status-${s.status.toLowerCase()}`}>{statuses[s.status] || s.status}</span></article>;
 
-  useEffect(() => { load(); }, [month, year]);
-
-  const naturalTotal = useMemo(() => sales.filter((s) => s.customerType === "NATURAL_PERSON").reduce((a, s) => a + Number(s.amount), 0), [sales]);
-  const companyTotal = useMemo(() => sales.filter((s) => s.customerType === "COMPANY").reduce((a, s) => a + Number(s.amount), 0), [sales]);
-
-  async function submitService() {
-    await fetch("/api/services", { method: "POST", body: JSON.stringify({ ...serviceForm, amount: Number(serviceForm.amount), serviceDate: `${serviceForm.serviceDate}T09:00:00.000Z` }) });
-    setServiceForm({ ...serviceForm, company: "", amount: "" });
-    load();
-  };
-
-  const salesChartData = Object.entries(dashboard.bySalesperson || {}).map(([name, value]) => ({ name, value }));
-  const weekChartData = Object.entries(dashboard.byWeek || {}).map(([name, value]) => ({ name, value }));
-
-  return (
-    <div className="container grid">
-      <div className="header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <h2 style={{ margin: 0 }}>{t.title}</h2>
-          <small>{t.subtitle}</small>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <select value={month} onChange={(e) => setMonth(Number(e.target.value))}>{Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{format(addMonths(new Date(year, 0, 1), i), "MMMM")}</option>)}</select>
-          <input className="input" type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} style={{ width: 100 }} />
-        </div>
-      </div>
-
-      <div className="tabs">
-        {[
-          ["summary", "Executive Summary"],
-          ["services", "Monthly Services Board"],
-          ["certificates", "Certificates Sales"],
-          ["performance", "Sales Performance 6x4"],
-          ["support", "Support Database"]
-        ].map(([id, label]) => <button key={id} className={`tab ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>{label}</button>)}
-      </div>
-
-      {tab === "summary" && <div className="grid" style={{ gridTemplateColumns: "repeat(4,minmax(220px,1fr))" }}>
-        <div className="card"><small>Total Services</small><div className="metric">{dashboard.totalServices ?? 0}</div></div>
-        <div className="card"><small>Estimated Billing</small><div className="metric">S/ {(dashboard.totalEstimatedBilling ?? 0).toFixed?.(2) ?? "0.00"}</div></div>
-        <div className="card"><small>Top Sales Rep</small><div className="metric">{dashboard.topSalesRep ?? "-"}</div></div>
-        <div className="card"><small>Best-selling course</small><div className="metric">{dashboard.bestSellingCourse ?? "-"}</div></div>
-
-        <div className="card" style={{ gridColumn: "span 2" }}><h4>Sales by Rep</h4><div style={{ height: 250 }}><ResponsiveContainer><BarChart data={salesChartData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip /><Bar dataKey="value" fill="#1f4da1" /></BarChart></ResponsiveContainer></div></div>
-        <div className="card" style={{ gridColumn: "span 2" }}><h4>Services by Week</h4><div style={{ height: 250 }}><ResponsiveContainer><BarChart data={weekChartData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip /><Bar dataKey="value" fill="#0f9d58" /></BarChart></ResponsiveContainer></div></div>
-
-        <div className="card" style={{ gridColumn: "span 4", display: "flex", gap: 16 }}>
-          <div className="badge" style={{ background: dashboard.bonus45 ? "#dcfce7" : "#e5e7eb" }}>{dashboard.bonus45 ? "BONUS 45 ACTIVATED" : "Bonus 45 pending"}</div>
-          <div className="badge" style={{ background: dashboard.bonus70 ? "#dcfce7" : "#e5e7eb" }}>{dashboard.bonus70 ? "BONUS 70 ACTIVATED" : "Bonus 70 pending"}</div>
-          <div className="badge" style={{ background: "#dbeafe" }}>Most assigned instructor: {dashboard.mostAssignedInstructor ?? "-"}</div>
-        </div>
-      </div>}
-
-     {tab === "services" && <>
-  {/* FORMULARIO PARA AGREGAR SERVICIO */}
-  <div className="card grid" style={{ gridTemplateColumns: "repeat(8,minmax(120px,1fr))", marginBottom: 16 }}>
-    <input className="input" placeholder="Company" value={serviceForm.company} onChange={(e) => setServiceForm({ ...serviceForm, company: e.target.value })} />
-    <select value={serviceForm.courseId} onChange={(e) => setServiceForm({ ...serviceForm, courseId: e.target.value })}>
-      <option value="">Course</option>
-      {meta.courses.map((x: any) => <option key={x.id} value={x.id}>{x.name}</option>)}
-    </select>
-    <select value={serviceForm.instructorId} onChange={(e) => setServiceForm({ ...serviceForm, instructorId: e.target.value })}>
-      <option value="">Instructor</option>
-      {meta.instructors.map((x: any) => <option key={x.id} value={x.id}>{x.name}</option>)}
-    </select>
-    <select value={serviceForm.locationId} onChange={(e) => setServiceForm({ ...serviceForm, locationId: e.target.value })}>
-      <option value="">District</option>
-      {meta.locations.map((x: any) => <option key={x.id} value={x.id}>{x.department} - {x.district}</option>)}
-    </select>
-    <select value={serviceForm.salespersonId} onChange={(e) => setServiceForm({ ...serviceForm, salespersonId: e.target.value })}>
-      <option value="">Sales rep</option>
-      {meta.salespeople.map((x: any) => <option key={x.id} value={x.id}>{x.name}</option>)}
-    </select>
-    <input className="input" type="date" value={serviceForm.serviceDate} onChange={(e) => setServiceForm({ ...serviceForm, serviceDate: e.target.value })} />
-    <input className="input" type="number" placeholder="Amount" value={serviceForm.amount} onChange={(e) => setServiceForm({ ...serviceForm, amount: e.target.value })} />
-    <button className="btn" onClick={submitService}>Add Service</button>
-    <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
-      <input type="checkbox" checked={serviceForm.certificatesOnly} onChange={(e) => setServiceForm({ ...serviceForm, certificatesOnly: e.target.checked })} /> Certificates only
-    </label>
-  </div>
-
-  {/* GRILLA DEL CALENDARIO */}
-  <div className="grid calendar-grid">
-    {days.map((d) => {
-      const items = services.filter((s) => new Date(s.serviceDate).getDate() === d);
-      return (
-        <div className="day-col" key={d} onClick={() => setSelectedDayServices(items)} style={{ cursor: "pointer" }}>
-          <strong>Day {d}</strong>
-          {items.map((s) =>
-            <div key={s.id} className={`service-card ${s.certificatesOnly ? "cert" : ""} ${s.status === "EXECUTED" ? "executed" : ""}`} style={{ position: "relative" }}>
-              {/* BOTÓN X */}
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (!confirm("¿Seguro que quieres eliminar este registro?")) return;
-                  try {
-                    const res = await fetch(`/api/services/${s.id}`, { method: "DELETE" });
-                    if (!res.ok) throw new Error("No se pudo eliminar");
-                    setServices(prev => prev.filter(x => x.id !== s.id));
-                  } catch (err) {
-                    alert("Error eliminando el registro");
-                  }
-                }}
-                style={{
-                  position: "absolute",
-                  top: 4,
-                  right: 4,
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                  color: "#555",
-                  fontSize: "14px",
-                  lineHeight: 1
-                }}
-              >
-                ✕
-              </button>
-
-              <div><strong>{s.company}</strong></div>
-              <small>
-  {s.course?.name ?? "Sin curso"} · {s.instructor?.name ?? "Sin instructor"}
-</small><br />
-
-<small>
-  {s.location?.department ?? "-"} / {s.location?.district ?? "-"}
-</small><br />
-
-<small>
-  {s.salesperson?.name ?? "Sin vendedor"} · S/{Number(s.amount ?? 0).toFixed(2)}
-</small>
-            </div>
-          )}
-        </div>
-      );
-    })}
-  </div>
-
-  {/* MODAL FLOTANTE CON TODOS LOS SERVICIOS DEL DÍA */}
-  {selectedDayServices && (
-    <div className="modal-overlay" onClick={() => setSelectedDayServices(null)} style={{
-      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-      background: "rgba(0,0,0,0.4)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 999
-    }}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ background: "#fff", padding: 16, borderRadius: 8, maxHeight: "80vh", overflowY: "auto", minWidth: 300, position: "relative" }}>
-        <h4>Servicios del día</h4>
-        <button style={{ position: "absolute", top: 8, right: 8 }} onClick={() => setSelectedDayServices(null)}>✕</button>
-        {selectedDayServices.map(s => (
-          <div key={s.id} className={`service-card ${s.certificatesOnly ? "cert" : ""} ${s.status === "EXECUTED" ? "executed" : ""}`} style={{ marginBottom: 8 }}>
-            <div><strong>{s.company}</strong></div>
-            <small>
-  {s.course?.name ?? "Sin curso"} · {s.instructor?.name ?? "Sin instructor"}
-</small><br />
-
-<small>
-  {s.location?.department ?? "-"} / {s.location?.district ?? "-"}
-</small><br />
-
-<small>
-  {s.salesperson?.name ?? "Sin vendedor"} · S/{Number(s.amount ?? 0).toFixed(2)}
-</small>
-          </div>
-        ))}
-      </div>
-    </div>
-  )}
-</>}
-
-     {tab === "certificates" && (
-  <div className="grid">
-    {/* FORMULARIO PARA AGREGAR VENTA */}
-    <div className="card grid" style={{ gridTemplateColumns: "repeat(8,minmax(120px,1fr))", marginBottom: 16 }}>
-      <input
-        className="input"
-        placeholder="Customer"
-        value={saleForm.customerName}
-        onChange={(e) => setSaleForm({ ...saleForm, customerName: e.target.value })}
-      />
-
-      <select
-        value={saleForm.customerType}
-        onChange={(e) => setSaleForm({ ...saleForm, customerType: e.target.value as "NATURAL_PERSON" | "COMPANY" })}
-      >
-        <option value="NATURAL_PERSON">Natural Person</option>
-        <option value="COMPANY">Company</option>
-      </select>
-
-      <select
-        value={saleForm.courseId}
-        onChange={(e) => setSaleForm({ ...saleForm, courseId: e.target.value })}
-      >
-        <option value="">Course</option>
-        {meta.courses.map((x: any) => <option key={x.id} value={x.id}>{x.name}</option>)}
-      </select>
-
-      <select
-        value={saleForm.salespersonId}
-        onChange={(e) => setSaleForm({ ...saleForm, salespersonId: e.target.value })}
-      >
-        <option value="">Commercial</option>
-        {meta.salespeople.map((x: any) => <option key={x.id} value={x.id}>{x.name}</option>)}
-      </select>
-
-      <input
-        className="input"
-        type="date"
-        value={saleForm.saleDate}
-        onChange={(e) => setSaleForm({ ...saleForm, saleDate: e.target.value })}
-      />
-
-      <input
-        className="input"
-        placeholder="Amount"
-        value={saleForm.amount}
-        onChange={(e) => setSaleForm({ ...saleForm, amount: e.target.value })}
-      />
-
-      <button
-        className="btn"
-        onClick={async () => {
-          if (!saleForm.customerName || !saleForm.courseId || !saleForm.salespersonId || !saleForm.amount) {
-            return alert("Complete todos los campos");
-          }
-
-          const body = {
-            ...saleForm,
-            amount: Number(saleForm.amount),
-            saleDate: `${saleForm.saleDate}T09:00:00.000Z`
-          };
-
-          try {
-            // Guardar en Certificate Sales
-            const res = await fetch("/api/certificate-sales", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(body),
-            });
-
-            const text = await res.text();
-let data = null;
-
-try {
-  data = text ? JSON.parse(text) : null;
-} catch (e) {
-  console.warn("La respuesta no es JSON válido:", text);
-}
-
-if (!res.ok) {
-  return alert(`Error guardando la venta: ${data?.error || res.status}`);
-}
-
-            // Si amount > 700, agregar también a Monthly Services Board
-            if (Number(saleForm.amount) > 700) {
-              await fetch("/api/services", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  company: saleForm.customerType === "COMPANY" ? saleForm.companyName || saleForm.customerName : saleForm.customerName,
-                  courseId: saleForm.courseId,
-                  instructorId: null,
-                  locationId: null,
-                  salespersonId: saleForm.salespersonId,
-                  certificatesOnly: true,
-                  amount: Number(saleForm.amount),
-                  serviceDate: `${saleForm.saleDate}T09:00:00.000Z`,
-                  status: "SCHEDULED"
-                })
-              });
-            }
-
-            // Reset form
-            setSaleForm({
-              customerName: "",
-              customerType: "NATURAL_PERSON",
-              courseId: "",
-              salespersonId: "",
-              amount: "",
-              saleDate: format(new Date(), "yyyy-MM-dd"),
-              status: "PAID",
-              companyName: ""
-            });
-
-            // Recargar tabla
-            load();
-          } catch (err) {
-            console.error("Error creando sale:", err);
-            alert("Error guardando la venta, revisa la consola");
-          }
-        }}
-      >
-        Save Sale
-      </button>
-    </div>
-
-    {/* RESUMEN DE VENTAS */}
-    <div className="card">
-      <div style={{ display: "flex", gap: 20 }}>
-        <div>Natural persons: <strong>S/ {naturalTotal.toFixed(2)}</strong></div>
-        <div>Companies: <strong>S/ {companyTotal.toFixed(2)}</strong></div>
-        <div>Grand total: <strong>S/ {(naturalTotal + companyTotal).toFixed(2)}</strong></div>
-      </div>
-
-      {/* TABLA DE VENTAS */}
-      <table className="table">
-        <thead>
-          <tr><th>Customer</th><th>Type</th><th>Course</th><th>Commercial</th><th>Amount</th><th>Date</th><th>Status</th><th></th></tr>
-        </thead>
-        <tbody>
-          {sales.map((s) => (
-            <tr key={s.id}>
-              <td>{s.customerName}</td>
-              <td>{s.customerType}</td>
-              <td>{s.course.name}</td>
-              <td>{s.salesperson.name}</td>
-              <td>S/{Number(s.amount).toFixed(2)}</td>
-              <td>{format(new Date(s.saleDate), "yyyy-MM-dd")}</td>
-              <td>{s.status}</td>
-              <td>
-                <button
-                  style={{ background: "transparent", color: "#555", border: "none", cursor: "pointer" }}
-                  onClick={async () => {
-                    if (!confirm("¿Seguro que quieres eliminar este registro?")) return;
-                    try {
-                      const res = await fetch(`/api/certificate-sales/${s.id}`, {
-                        method: "DELETE",
-                      });
-                      if (!res.ok) throw new Error("No se pudo eliminar");
-
-                      setSales(prev => prev.filter(x => x.id !== s.id));
-                    } catch (err) {
-                      console.error(err);
-                      alert("Error eliminando la venta");
-                    }
-                  }}
-                >✕</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
-
-      {tab === "performance" && <div className="card">
-        <table className="table"><thead><tr><th>Week</th>{meta.salespeople.map((s: any) => <th key={s.id}>{s.name}</th>)}</tr></thead><tbody>{["Week 1", "Week 2", "Week 3", "Week 4"].map((week) => <tr key={week}><td>{week}</td>{meta.salespeople.map((sp: any) => {
-          const count = dashboard.weeklyMatrix?.[sp.name]?.[week] ?? 0;
-          return <td key={sp.id}>{count} {count > 5 && <span className="badge" style={{ background: "#dcfce7" }}>WEEKLY BONUS</span>}</td>;
-        })}</tr>)}</tbody></table>
-        <h4>Monthly Ranking</h4>
-        <ol>{(dashboard.ranking || []).map((r: any) => <li key={r[0]}>{r[0]} - {r[1]} services</li>)}</ol>
-      </div>}
-
-      {tab === "support" && <div className="grid" style={{ gridTemplateColumns: "repeat(4,minmax(220px,1fr))" }}>
-        <CrudCard title="Instructors" endpoint="instructors" fields={["name"]} onDone={load} items={meta.instructors} />
-        <CrudCard title="Courses" endpoint="courses" fields={["name"]} onDone={load} items={meta.courses} />
-        <CrudCard title="Salespeople" endpoint="salespeople" fields={["name"]} onDone={load} items={meta.salespeople} />
-        <CrudCard title="Locations" endpoint="locations" fields={["department", "district"]} onDone={load} items={meta.locations} />
-      </div>}
-    </div>
-  );
-}
-
-function CrudCard({ title, endpoint, fields, items, onDone }: { title: string; endpoint: string; fields: string[]; items: any[]; onDone: () => void }) {
-  const [form, setForm] = useState<Record<string, string>>({});
-
-  return <div className="card"><h4>{title}</h4>
-    <div className="grid">{fields.map((f) => <input key={f} className="input" placeholder={f} value={form[f] || ""} onChange={(e) => setForm({ ...form, [f]: e.target.value })} />)}
-      <button className="btn" onClick={async () => { await fetch(`/api/metadata/${endpoint}`, { 
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(form)
-}); setForm({}); onDone(); }}>Add</button>
-    </div>
-    <ul>
-        {items.slice(0, 8).map((i) => (
-          <li key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-            <span>{i.name || `${i.department} - ${i.district}`}</span>
-            <button
-              style={{ background: "red", color: "white", border: "none", padding: "2px 6px", cursor: "pointer" }}
-              onClick={async () => {
-            if (!confirm("¿Seguro que quieres eliminar este registro?")) return;
-            try {
-              const res = await fetch(`/api/metadata/${endpoint}/${i.id}`, { method: "DELETE" });
-                if (!res.ok) throw new Error("No se pudo eliminar");
-                  onDone(); // recarga la lista
-                } catch (err) {
-              alert("Error eliminando el registro");
-              }
-            }}
-          >
-            Eliminar
-          </button>
-        </li>
-      ))}
-    </ul>
+  return <div className="workspace-shell">
+    <aside className={`sidebar ${mobileNav ? "is-open" : ""}`}><a className="brand" href="/dashboard"><span className="brand-mark">C<span>.</span></span><span>CONSITEC<small>Gestión comercial</small></span></a><div className="nav-caption">ESPACIO DE TRABAJO</div><nav aria-label="Navegación principal">{tabs.map(item => <button key={item.id} className={`nav-item ${tab === item.id ? "active" : ""}`} aria-current={tab === item.id ? "page" : undefined} onClick={() => { setTab(item.id); setMobileNav(false); setQuery(""); setRep(""); setStatus(""); }}><item.icon size={19} />{item.label}</button>)}</nav><div className="sidebar-note"><span className="live-dot" />Tu operación, en un solo lugar<p>Servicios, certificados y equipo comercial.</p></div><div className="sidebar-footer"><span className="avatar">CO</span><div>Equipo Consitec<small>Panel de operaciones</small></div></div></aside>
+    {mobileNav && <button className="nav-backdrop" aria-label="Cerrar navegación" onClick={() => setMobileNav(false)} />}
+    <main className="main-content"><header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" aria-label="Abrir navegación" onClick={() => setMobileNav(true)}><Menu size={22} /></button><span>Panel comercial <span className="breadcrumb">/ {tabs.find(t => t.id === tab)?.label}</span></span></div><button className="refresh-button" disabled={loading} onClick={() => void load()}><RefreshCw size={16} className={loading ? "spin" : ""} />Actualizar</button></header>
+      <div className="page-content"><div className="page-heading"><div><div className="eyebrow">CONSITEC · OPERACIONES</div><h1>{tabs.find(t => t.id === tab)?.label}</h1><p>{tab === "summary" ? "Una mirada clara a tu actividad comercial del mes." : tab === "services" ? "Organiza los servicios y consulta cada jornada." : tab === "certificates" ? "Gestiona tus ventas y consulta sus importes." : tab === "performance" ? "Consulta el avance semanal de tu equipo." : "Administra los datos que sostienen tu operación."}</p></div><button className="btn" onClick={() => openRecord(tab === "certificates" ? "sale" : "service")}><Plus size={17} />{tab === "certificates" ? "Nueva venta" : "Nuevo servicio"}</button></div>
+      <div className="period-toolbar"><div className="period-picker"><button className="icon-button" aria-label="Mes anterior" onClick={() => changeMonth(-1)}><ChevronLeft size={18} /></button><CalendarDays size={18} /><select aria-label="Mes" value={period.month} onChange={e => setPeriod({ ...period, month: Number(e.target.value) })}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i + 1}>{format(new Date(2026, i, 1), "MMMM", { locale: es })}</option>)}</select><select aria-label="Año" value={period.year} onChange={e => setPeriod({ ...period, year: Number(e.target.value) })}>{Array.from(new Set([period.year, ...Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i)])).sort((a, b) => a - b).map(y => <option key={y}>{y}</option>)}</select><button className="icon-button" aria-label="Mes siguiente" onClick={() => changeMonth(1)}><ChevronRight size={18} /></button></div><span className="period-hint">{loading ? "Cargando información…" : `${services.length} servicios · ${sales.length} ventas de certificados`}</span></div>
+      {error && <div className="error-banner" role="alert"><AlertCircle size={18} /><span>{error}</span><button onClick={() => void load()}>Reintentar</button></div>}
+      <div aria-busy={loading} className={loading ? "content-area is-loading" : "content-area"}>
+      {tab === "summary" && <><div className="metric-grid">{[{ label: "Servicios del mes", value: dashboard.totalServices ?? 0, icon: BriefcaseBusiness, note: "Actividad registrada", tone: "blue" }, { label: "Facturación estimada", value: money(dashboard.totalEstimatedBilling ?? 0), icon: Wallet, note: "Importes de servicios", tone: "orange" }, { label: "Comercial destacado", value: dashboard.topSalesRep || "—", icon: Users, note: "Por cantidad de servicios", tone: "purple" }, { label: "Curso más vendido", value: dashboard.bestSellingCourse || "—", icon: GraduationCap, note: "Durante el mes seleccionado", tone: "green" }].map(m => <div className="metric-card" key={m.label}><div className="split"><span>{m.label}</span><div className={`metric-icon ${m.tone}`}><m.icon size={21} /></div></div><div className="metric-value">{m.value}</div><small>{m.note}</small></div>)}</div><div className="chart-grid"><Chart title="Actividad por comercial" subtitle="Servicios registrados en el mes" data={Object.entries(dashboard.bySalesperson).map(([name, value]) => ({ name, value }))} color="#234eaa" /><Chart title="Distribución semanal" subtitle="Semana 1: días 1–7 · Semana 4: días 22 al cierre" data={Object.entries(dashboard.byWeek).map(([name, value], i) => ({ name: `Semana ${i + 1}`, value }))} color="#f28a36" /></div><div className="bottom-grid"><section className="panel"><div className="section-heading"><div><h2>Metas de servicios</h2><p>Avance mensual hacia los bonos</p></div><TrendingUp size={20} /></div>{[45, 70].map(target => <div className="goal" key={target}><div className="split"><strong>Bono {target}</strong><span>{dashboard.totalServices ?? 0} / {target} <small>servicios</small></span></div><progress max={target} value={Math.min(dashboard.totalServices ?? 0, target)} /><small>{(dashboard.totalServices ?? 0) > target ? "Bono activado" : `Faltan ${target + 1 - (dashboard.totalServices ?? 0)} servicios para activar el bono`}</small></div>)}</section><section className="panel"><div className="section-heading"><div><h2>Próximos servicios</h2><p>Programados en {periodLabel}</p></div><button className="text-button" onClick={() => setTab("services")}>Ver agenda →</button></div>{services.filter(s => s.status === "SCHEDULED").slice(0, 4).map(s => <div className="upcoming-item" key={s.id}><span className="date-chip">{dateLabel(s.serviceDate)}</span><div><strong>{s.company}</strong><small>{s.course?.name}</small></div><b>{money(s.amount)}</b></div>)}{!services.some(s => s.status === "SCHEDULED") && <Empty text="No hay servicios programados este mes." />}</section></div></>}
+      {(tab === "services" || tab === "certificates") && <div className="filter-bar"><label className="search-box"><Search size={17} /><input aria-label="Buscar cliente, curso o comercial" placeholder="Buscar cliente, curso o comercial…" value={query} onChange={e => setQuery(e.target.value)} /></label><select aria-label="Filtrar por comercial" value={rep} onChange={e => setRep(e.target.value)}><option value="">Todos los comerciales</option>{meta.salespeople.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select><select aria-label="Filtrar por estado" value={status} onChange={e => setStatus(e.target.value)}><option value="">Todos los estados</option>{Object.entries(statuses).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>{(query || rep || status) && <button className="text-button" onClick={() => { setQuery(""); setRep(""); setStatus(""); }}>Limpiar</button>}</div>}
+      {tab === "services" && <section className="panel calendar-panel"><div className="section-heading"><div><h2 className="capitalize">{periodLabel}</h2><p>{visibleServices.length} servicios coinciden con tus filtros</p></div><span className="legend"><i />Servicio <i className="orange-dot" />Certificado</span></div><div className="calendar-scroll"><div className="calendar"><div className="weekdays">{["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map(d => <span key={d}>{d}</span>)}</div><div className="calendar-days">{Array.from({ length: leadingDays }, (_, i) => <div className="calendar-day outside" key={`blank-${i}`} />)}{Array.from({ length: days }, (_, i) => { const day = i + 1; const items = visibleServices.filter(s => new Date(s.serviceDate).getDate() === day); const today = new Date(); const isToday = today.getDate() === day && today.getMonth() + 1 === period.month && today.getFullYear() === period.year; return <div className={`calendar-day ${isToday ? "today" : ""}`} key={day}><button className="day-number" aria-label={`Ver servicios del ${day} de ${periodLabel}`} onClick={() => setSelectedDay(day)}>{day}{items.length > 0 && <small>{items.length}</small>}</button>{items.slice(0, 2).map(serviceCard)}{items.length > 2 && <button className="text-button" onClick={() => setSelectedDay(day)}>+{items.length - 2} más</button>}</div>; })}</div></div></div>{!visibleServices.length && <Empty text="No hay servicios para esta selección." action="Registrar servicio" onAction={() => openRecord("service")} />}</section>}
+      {tab === "certificates" && <><div className="sale-summary">{[{ label: "Personas naturales", value: visibleSales.filter(s => s.customerType === "NATURAL_PERSON").reduce((a, s) => a + Number(s.amount), 0) }, { label: "Empresas", value: visibleSales.filter(s => s.customerType === "COMPANY").reduce((a, s) => a + Number(s.amount), 0) }, { label: "Total de la selección", value: visibleSales.reduce((a, s) => a + Number(s.amount), 0) }].map(m => <div className="metric-card" key={m.label}><small>{m.label}</small><div className="metric-value">{money(m.value)}</div></div>)}</div><section className="panel"><div className="section-heading"><div><h2>Ventas de certificados</h2><p>{visibleSales.length} registros en la selección</p></div></div><div className="table-scroll"><table><thead><tr><th>Cliente / curso</th><th>Tipo</th><th>Comercial</th><th>Importe</th><th>Fecha</th><th>Estado</th><th><span className="sr-only">Acciones</span></th></tr></thead><tbody>{visibleSales.map(s => <tr key={s.id}><td><strong>{s.customerName}</strong><small>{s.course?.name}</small></td><td>{s.customerType === "COMPANY" ? "Empresa" : "Persona natural"}</td><td>{s.salesperson?.name}</td><td><b>{money(s.amount)}</b></td><td>{dateLabel(s.saleDate)}</td><td><span className={`status status-${s.status.toLowerCase()}`}>{statuses[s.status]}</span></td><td><button className="icon-button danger" aria-label={`Eliminar venta de ${s.customerName}`} onClick={() => setPendingDelete({ url: `/api/certificate-sales/${s.id}`, label: s.customerName })}><Trash2 size={17} /></button></td></tr>)}</tbody></table></div>{!visibleSales.length && <Empty text="No hay ventas para esta selección." action="Registrar venta" onAction={() => openRecord("sale")} />}</section></>}
+      {tab === "performance" && <div className="bottom-grid"><section className="panel"><div className="section-heading"><div><h2>Avance semanal</h2><p>El distintivo aparece al superar 5 servicios por semana.</p></div></div><div className="table-scroll"><table><thead><tr><th>Comercial</th>{[1, 2, 3, 4].map(w => <th key={w}>Sem. {w}</th>)}</tr></thead><tbody>{meta.salespeople.map(sp => <tr key={sp.id}><td><strong>{sp.name}</strong></td>{[1, 2, 3, 4].map(w => { const count = dashboard.weeklyMatrix[sp.name || ""]?.[`Week ${w}`] || 0; return <td key={w}><span className={count > 5 ? "count-badge achieved" : "count-badge"}>{count}{count > 5 && <CheckCircle2 size={12} />}</span></td>; })}</tr>)}</tbody></table></div>{!meta.salespeople.length && <Empty text="Agrega comerciales en la base de soporte." />}</section><section className="panel"><div className="section-heading"><div><h2>Ranking mensual</h2><p>Ordenado por cantidad de servicios</p></div><Award size={22} /></div>{dashboard.ranking.map(([name, value], i) => <div className="ranking-item" key={name}><span className={`rank ${i === 0 ? "first" : ""}`}>{i + 1}</span><div><strong>{name}</strong><progress value={value} max={dashboard.ranking[0]?.[1] || 1} /></div><b>{value}<small>servicios</small></b></div>)}{!dashboard.ranking.length && <Empty text="El ranking aparecerá cuando registres servicios." />}</section></div>}
+      {tab === "support" && <div className="support-grid">{([{ key: "instructors", title: "Instructores", fields: ["name"] }, { key: "courses", title: "Cursos", fields: ["name"] }, { key: "salespeople", title: "Comerciales", fields: ["name"] }, { key: "locations", title: "Ubicaciones", fields: ["department", "district"] }] as const).map(item => <SupportCard key={item.key} title={item.title} endpoint={item.key} fields={[...item.fields]} items={meta[item.key]} onDone={load} announce={announce} onDelete={(id, label) => setPendingDelete({ url: `/api/metadata/${item.key}/${id}`, label: item.key === "courses" ? `${label} y todos sus servicios y ventas asociados` : item.key === "locations" ? `${label} y todos sus servicios asociados` : label })} />)}</div>}
+      </div><footer className="page-footer">CONSITEC · Gestión comercial y operativa<span className="capitalize">{periodLabel}</span></footer></div>
+    </main>
+    {notice && <div className={`toast ${notice.error ? "toast-error" : ""}`} role={notice.error ? "alert" : "status"}>{notice.error ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}<span>{notice.text}</span><button className="icon-button" aria-label="Cerrar notificación" onClick={() => setNotice(null)}><X size={17} /></button></div>}
+    {modal && <Dialog title={modal === "service" ? "Nuevo servicio" : "Nueva venta de certificado"} onClose={() => { if (!busy) setModal(null); }}><p className="dialog-intro">Completa los datos para agregar el registro.</p><form onSubmit={saveRecord}><div className="form-grid"><label className="full-width">{modal === "service" ? "Empresa / cliente" : "Nombre del cliente"}<input name={modal === "service" ? "company" : "customerName"} placeholder="Nombre o razón social" required /></label>{modal === "sale" && <label>Tipo de cliente<select name="customerType"><option value="NATURAL_PERSON">Persona natural</option><option value="COMPANY">Empresa</option></select></label>}<label>Curso<select name="courseId" required><option value="">Selecciona un curso</option>{meta.courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Comercial<select name="salespersonId" required><option value="">Selecciona un comercial</option>{meta.salespeople.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>{modal === "service" && <><label>Instructor <small>(opcional)</small><select name="instructorId"><option value="">Sin asignar</option>{meta.instructors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Ubicación <small>(opcional)</small><select name="locationId"><option value="">Sin asignar</option>{meta.locations.map(c => <option key={c.id} value={c.id}>{c.department} / {c.district}</option>)}</select></label></>}<label>Fecha<input name={modal === "service" ? "serviceDate" : "saleDate"} type="date" defaultValue={format(new Date(period.year, period.month - 1, selectedDay ?? 1), "yyyy-MM-dd")} required /></label><label>Importe (S/)<input name="amount" type="number" min="0.01" max="99999999.99" step="0.01" placeholder="0.00" required /></label><label>Estado<select name="status" defaultValue={modal === "service" ? "SCHEDULED" : "PAID"}>{Object.entries(statuses).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>{modal === "service" && <label className="checkbox-label full-width"><input name="certificatesOnly" type="checkbox" />Solo certificados</label>}</div>{modal === "sale" && <p className="form-note">Las ventas mayores a S/700 también se agregan a la agenda de servicios.</p>}<div className="dialog-actions"><button type="button" className="btn secondary" disabled={busy} onClick={() => setModal(null)}>Cancelar</button><button className="btn" disabled={busy || !meta.courses.length || !meta.salespeople.length}>{busy ? "Guardando…" : "Guardar registro"}</button></div>{(!meta.courses.length || !meta.salespeople.length) && <p className="form-note">Agrega al menos un curso y un comercial en la base de soporte.</p>}</form></Dialog>}
+    {selectedDay !== null && <Dialog title={`Servicios del ${selectedDay} de ${periodLabel}`} onClose={() => setSelectedDay(null)}>{visibleServices.filter(s => new Date(s.serviceDate).getDate() === selectedDay).map(serviceCard)}{!visibleServices.some(s => new Date(s.serviceDate).getDate() === selectedDay) && <Empty text="No hay servicios que coincidan con tus filtros este día." />}</Dialog>}
+    {pendingDelete && <Dialog title="Eliminar registro" onClose={() => { if (!busy) setPendingDelete(null); }}><p>Se eliminará el registro de <strong>{pendingDelete.label}</strong>. Esta acción no se puede deshacer.</p><div className="dialog-actions"><button className="btn secondary" disabled={busy} onClick={() => setPendingDelete(null)}>Cancelar</button><button className="btn destructive" disabled={busy} onClick={() => void deleteRecord()}>{busy ? "Eliminando…" : "Eliminar registro"}</button></div></Dialog>}
   </div>;
+}
+function Empty({ text, action, onAction }: { text: string; action?: string; onAction?: () => void }) { return <div className="empty-state"><CalendarDays size={27} /><p>{text}</p>{action && <button className="text-button" onClick={onAction}>{action} →</button>}</div>; }
+function Chart({ title, subtitle, data, color }: { title: string; subtitle: string; data: { name: string; value: number }[]; color: string }) { return <section className="panel"><div className="section-heading"><div><h2>{title}</h2><p>{subtitle}</p></div></div>{data.some(d => d.value > 0) ? <div className="chart-height"><ResponsiveContainer width="100%" height="100%"><BarChart data={data} margin={{ left: -20, right: 8, top: 10, bottom: 16 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e9edf4" /><XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} /><YAxis allowDecimals={false} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} /><Tooltip cursor={{ fill: "#f3f6fb" }} formatter={value => [value, "Servicios"]} contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} /><Bar dataKey="value" fill={color} radius={[6, 6, 0, 0]} maxBarSize={45} /></BarChart></ResponsiveContainer></div> : <Empty text="Los gráficos aparecerán al registrar servicios." />}</section>; }
+function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose); onCloseRef.current = onClose;
+  useEffect(() => { const previous = document.activeElement as HTMLElement; const overflow = document.body.style.overflow; document.body.style.overflow = "hidden"; ref.current?.focus(); const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onCloseRef.current(); if (e.key === "Tab") { const nodes = ref.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]'); if (!nodes?.length) return; const first = nodes[0], last = nodes[nodes.length - 1]; if (e.shiftKey && (document.activeElement === first || document.activeElement === ref.current)) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && (document.activeElement === last || document.activeElement === ref.current)) { e.preventDefault(); first.focus(); } } }; document.addEventListener("keydown", handler); return () => { document.removeEventListener("keydown", handler); document.body.style.overflow = overflow; previous?.focus(); }; }, []);
+  return <div className="modal-overlay" onClick={onClose}><div className="dialog" ref={ref} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} onClick={e => e.stopPropagation()}><div className="section-heading"><h2>{title}</h2><button className="icon-button" aria-label="Cerrar ventana" onClick={onClose}><X size={20} /></button></div>{children}</div></div>;
+}
+function SupportCard({ title, endpoint, fields, items, onDone, announce, onDelete }: { title: string; endpoint: string; fields: string[]; items: Meta[]; onDone: () => Promise<void>; announce: (text: string, error?: boolean) => void; onDelete: (id: string, label: string) => void }) {
+  const [search, setSearch] = useState(""); const [busy, setBusy] = useState(false);
+  const visible = items.filter(i => `${i.name || ""} ${i.department || ""} ${i.district || ""}`.toLowerCase().includes(search.toLowerCase()));
+  async function submit(e: FormEvent<HTMLFormElement>) { e.preventDefault(); const form = e.currentTarget; const data = Object.fromEntries(new FormData(form)); setBusy(true); try { await request(`/api/metadata/${endpoint}`, post(data)); form.reset(); announce("Dato agregado correctamente."); await onDone(); } catch (err) { announce(err instanceof Error ? err.message : "No se pudo agregar.", true); } finally { setBusy(false); } }
+  return <section className="panel support-card"><div className="section-heading"><h2>{title}</h2><span className="count-badge">{items.length}</span></div><label className="search-box"><Search size={16} /><input aria-label={`Buscar ${title.toLowerCase()}`} value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar…" /></label><ul className="support-list">{visible.map(i => <li key={i.id}><span className="list-dot" /><span>{i.name || `${i.department} / ${i.district}`}</span><button type="button" className="icon-button danger" aria-label={`Eliminar ${i.name || i.district}`} onClick={() => onDelete(i.id, i.name || `${i.department} / ${i.district}`)}><Trash2 size={15} /></button></li>)}</ul>{!visible.length && <p className="muted">No hay registros para mostrar.</p>}<form className="support-form" onSubmit={submit}>{fields.map(f => <label key={f}>{f === "name" ? "Nombre" : f === "department" ? "Departamento" : "Distrito"}<input name={f} required placeholder={f === "name" ? "Agregar nombre" : f === "department" ? "Ej. Lima" : "Ej. San Isidro"} /></label>)}<button className="btn secondary" disabled={busy}><Plus size={16} />{busy ? "Agregando…" : "Agregar"}</button></form></section>;
 }

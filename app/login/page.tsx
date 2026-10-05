@@ -1,43 +1,19 @@
 "use client";
-
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-
+import { ArrowRight, LockKeyhole, AlertCircle } from "lucide-react";
 export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    const form = new FormData(e.currentTarget);
-    const payload = Object.fromEntries(form.entries());
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) {
-      setError("Invalid credentials");
-      setLoading(false);
-      return;
-    }
-    router.push("/dashboard");
+    e.preventDefault(); setLoading(true); setError("");
+    const payload = Object.fromEntries(new FormData(e.currentTarget));
+    try {
+      const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (!res.ok) throw new Error("Revisa tu usuario y contraseña.");
+      router.push("/dashboard");
+    } catch (err) { setError(err instanceof Error ? err.message : "No se pudo iniciar sesión. Inténtalo nuevamente."); setLoading(false); }
   }
-
-  return (
-    <div className="container" style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      <div className="card" style={{ maxWidth: 420, width: "100%" }}>
-        <h1>CONSITEC Login</h1>
-        <p>Internal commercial and operations panel.</p>
-        <form onSubmit={onSubmit} className="grid">
-          <input className="input" name="username" placeholder="Username" required />
-          <input className="input" name="password" type="password" placeholder="Password" required />
-          <button className="btn" disabled={loading}>{loading ? "Accessing..." : "Login"}</button>
-          {error && <small style={{ color: "#b91c1c" }}>{error}</small>}
-        </form>
-      </div>
-    </div>
-  );
+  return <main className="login-shell"><section className="login-story"><a className="brand" href="/"><span className="brand-mark">C<span>.</span></span><span>CONSITEC<small>Gestión comercial</small></span></a><div><span className="eyebrow">TU EQUIPO. TU OPERACIÓN.</span><h1>Todo conectado.<br />Todo bajo control.</h1><p>Organiza tus servicios, consulta las ventas de certificados y sigue el avance de tu equipo en un mismo espacio.</p><div className="login-pills"><span>Servicios</span><span>Certificados</span><span>Equipo comercial</span></div></div><small>CONSITEC · Gestión comercial y operativa</small></section><section className="login-form-panel"><div className="login-form"><span className="login-lock"><LockKeyhole size={24} /></span><h2>Bienvenido a Consitec</h2><p>Ingresa para acceder a tu espacio de trabajo.</p><form onSubmit={onSubmit} className="grid"><label>Usuario<input name="username" placeholder="Ingresa tu usuario" autoComplete="username" required /></label><label>Contraseña<input name="password" type="password" placeholder="Ingresa tu contraseña" autoComplete="current-password" required /></label><button className="btn" disabled={loading}>{loading ? "Ingresando…" : "Ingresar al panel"}<ArrowRight size={17} /></button>{error && <div className="error-banner" role="alert"><AlertCircle size={17} />{error}</div>}</form><small>Panel interno de operaciones</small></div></section></main>;
 }
