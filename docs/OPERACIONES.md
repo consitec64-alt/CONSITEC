@@ -211,3 +211,14 @@ El segundo prueba fichas, códigos obligatorios, viáticos opcionales, fechas
 múltiples, disponibilidad y reservas simultáneas, cambios de mes de facturación,
 conservación de la fecha al editar, copias de certificados sin guardado parcial y
 rechazo de Pagado. Ambos eliminan sus datos temporales y rechazan bases remotas.
+
+## Vigencia SCTR
+
+Base de soporte incluye un apartado SCTR separado. Muestra solo instructores
+con SCTR = Sí en su ficha. Registra Desde y Hasta y pulsa Guardar vigencia.
+Se indica Sin fechas, Por iniciar, Vigente o Vencido según la fecha de Perú;
+ambos límites son inclusivos. Las fechas se conservan si después se marca No,
+pero el instructor deja de aparecer en este apartado. La migración
+`20261006230000_sctr_validity` deja vacías las fechas históricas sin inventarlas.
+
+El pie del panel y de Usuarios muestra la web y la dirección fiscal de CONSITEC.

@@ -136,3 +136,5 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 
 .service-item>small{display:block}.user-account .user-identity{grid-row:span 2}
 @media(max-width:760px){.user-account .user-identity{grid-row:auto}}
+
+.company-footer{gap:18px;align-items:baseline;flex-wrap:wrap;line-height:1.7}.company-footer a{color:var(--blue);overflow-wrap:anywhere}.company-footer address{font-style:normal;text-align:right;color:var(--muted)}.sctr-entry{border-top:1px solid var(--border);padding:18px 0}.sctr-entry .form-grid{margin-top:15px}@media(max-width:760px){.company-footer{flex-direction:column}.company-footer address{text-align:left}}

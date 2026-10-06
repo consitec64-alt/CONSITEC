@@ -62,3 +62,22 @@ SMOKE_BASE_URL=http://127.0.0.1:3000 node --env-file=.env scripts/users-smoke.mj
 El test verifica creación, normalización e inicio de sesión por correo, cambio
 de correo conservando contraseña y sesión, acceso previo, roles, validación,
 duplicados, bcrypt y CSRF. Limpia sus cuentas temporales y rechaza bases remotas.
+
+## Si se olvida una contraseña
+
+Actualmente no hay recuperación por correo ni botón de restablecimiento. La
+contraseña existente no puede leerse porque está guardada como hash bcrypt.
+
+Para una cuenta de vendedor, un administrador puede anotar su comercial
+asignado, eliminar esa cuenta y crearla nuevamente con el mismo correo,
+comercial y una nueva contraseña. Los servicios y ventas se conservan;
+las sesiones anteriores se revocan. Comparte la nueva contraseña por un canal
+privado. Esto crea una cuenta nueva, no recupera la contraseña anterior.
+
+No uses este procedimiento para la propia cuenta ni para el único
+administrador: el sistema impide eliminarlos. Ese caso requiere una
+intervención técnica autorizada para actualizar el hash, sin ejecutar seed.
+
+La mejora recomendada es añadir Restablecer contraseña para administradores
+en Usuarios. Para un flujo Olvidé mi contraseña por correo hacen falta un
+proveedor de correo y enlaces con tokens de un solo uso y vencimiento.

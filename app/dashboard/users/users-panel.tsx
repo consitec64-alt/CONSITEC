@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
+import CompanyFooter from "@/components/company-footer";
 import ThemeToggle from "@/components/theme-toggle";
 import Brand from "@/components/brand";
 
@@ -108,5 +109,6 @@ export default function UsersPanel() {
       {deleteError && <p className="error-banner" role="alert">{deleteError}</p>}
       <div className="dialog-actions"><button type="button" className="btn secondary" disabled={busy} onClick={() => { deleteDialog.current?.close(); setDeleteTarget(null); }}>Cancelar</button><button type="button" className="btn destructive" disabled={busy} onClick={() => void deleteUser()}>{busy ? "Eliminando…" : "Eliminar usuario"}</button></div>
     </dialog>}
+    <CompanyFooter />
   </main>;
 }

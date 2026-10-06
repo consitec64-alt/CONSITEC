@@ -51,6 +51,8 @@ model Instructor {
   courses      Course[] @relation("InstructorCourses")
   emoExpiresAt DateTime?
   sctr         Boolean @default(false)
+  sctrStartsAt DateTime?
+  sctrEndsAt   DateTime?
   carModel     String?
   carPlate     String?
   id       String    @id @default(cuid())

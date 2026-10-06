@@ -1,7 +1,7 @@
 export type Meta = {
   id: string; color?: string; name?: string; department?: string; district?: string;
   address?: string | null; dni?: string | null; courses?: { id: string; name: string }[]; courseNotes?: string | null;
-  emoExpiresAt?: string | null; sctr?: boolean; carModel?: string | null; carPlate?: string | null;
+  emoExpiresAt?: string | null; sctr?: boolean; sctrStartsAt?: string | null; sctrEndsAt?: string | null; carModel?: string | null; carPlate?: string | null;
 };
 export type Service = {
   id: string; company: string; correlativeCode: string | null; travelMode: 'NONE' | 'PLANE' | 'BUS';
