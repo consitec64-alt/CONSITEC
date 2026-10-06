@@ -17,7 +17,6 @@ enum ServiceStatus {
   SCHEDULED
   EXECUTED
   INVOICED
-  PAID
 }
 
 enum CustomerType {
@@ -32,7 +31,20 @@ model User {
   role     Role
 }
 
+enum TravelMode {
+  NONE
+  PLANE
+  BUS
+}
+
 model Instructor {
+  address      String?
+  dni          String?
+  courses      String?
+  emoExpiresAt DateTime?
+  sctr         Boolean @default(false)
+  carModel     String?
+  carPlate     String?
   id       String    @id @default(cuid())
   name     String    @unique
   services Service[]
@@ -65,10 +77,14 @@ model Location {
 model Service {
   id               String        @id @default(cuid())
   company          String
+  correlativeCode  String?
+  travelMode       TravelMode @default(NONE)
+  dates            ServiceDay[]
   amount           Decimal       @db.Decimal(10, 2)
   serviceDate      DateTime
   certificatesOnly Boolean       @default(false)
   status           ServiceStatus @default(SCHEDULED)
+  invoicedAt       DateTime?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
@@ -83,6 +99,7 @@ model Service {
   salesperson   Salesperson @relation(fields: [salespersonId], references: [id])
 
   @@index([serviceDate])
+  @@index([invoicedAt])
 }
 
 model CertificateSale {
@@ -92,6 +109,7 @@ model CertificateSale {
   amount        Decimal       @db.Decimal(10, 2)
   saleDate      DateTime
   status        ServiceStatus @default(SCHEDULED)
+  invoicedAt    DateTime?
   createdAt     DateTime      @default(now())
 
   courseId      String
@@ -101,4 +119,15 @@ model CertificateSale {
   salesperson   Salesperson  @relation(fields: [salespersonId], references: [id])
 
   @@index([saleDate])
+  @@index([invoicedAt])
+}
+
+model ServiceDay {
+  id        String @id @default(cuid())
+  date      DateTime
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, date])
+  @@index([date])
 }

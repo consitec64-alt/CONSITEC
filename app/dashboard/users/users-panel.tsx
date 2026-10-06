@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
+import ThemeToggle from "@/components/theme-toggle";
 import Brand from "@/components/brand";
 
 type User = { id: string; username: string; role: "ADMIN" | "SALES" };
@@ -76,7 +77,7 @@ export default function UsersPanel() {
   }
   return <main className="page-content users-page">
     <Link href="/dashboard" className="text-button">← Volver al panel</Link>
-    <div className="page-heading"><div><h1>Usuarios</h1><p>Crea cuentas para acceder a CONSITEC.</p></div><Brand href="/dashboard" className="brand-compact" /></div>
+    <div className="page-heading"><div><div className="users-title"><h1>Usuarios</h1><ThemeToggle /></div><p>Crea cuentas para acceder a CONSITEC.</p></div><Brand href="/dashboard" className="brand-compact" /></div>
     {error && <p className="error-banner" role="alert">{error}</p>}
     {notice && <p className="users-notice" role="status">{notice}</p>}
     <section className="panel"><div className="section-heading"><h2>Crear usuario</h2></div>

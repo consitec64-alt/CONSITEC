@@ -42,14 +42,14 @@ const before = await (await api(`/api/dashboard?${period}`, { headers })).json()
 assert(Number.isFinite(before.totalServices));
 const created = [];
 try {
-  const serviceResponse = await api('/api/services', { ...json({ company: 'Vercel smoke test', courseId: courses[0].id, salespersonId: reps[0].id, instructorId: null, locationId: null, certificatesOnly: false, amount: 125.50, serviceDate: '2026-10-06T09:00:00.000Z', status: 'SCHEDULED' }), headers: { ...headers, 'Content-Type': 'application/json' } });
+  const serviceResponse = await api('/api/services', { ...json({ company: 'Vercel smoke test', correlativeCode: '0042', courseId: courses[0].id, salespersonId: reps[0].id, instructorId: null, locationId: null, certificatesOnly: false, amount: 125.50, serviceDate: '2026-10-06T09:00:00.000Z', status: 'SCHEDULED' }), headers: { ...headers, 'Content-Type': 'application/json' } });
   assert.equal(serviceResponse.status, 201);
   const service = await serviceResponse.json();
   created.push(`/api/services/${service.id}`);
   const after = await (await api(`/api/dashboard?${period}`, { headers })).json();
   assert.equal(after.totalServices, before.totalServices + 1);
   assert.equal(after.totalEstimatedBilling, before.totalEstimatedBilling + 125.50);
-  const saleResponse = await api('/api/certificate-sales', { ...json({ customerName: 'Vercel smoke test', customerType: 'NATURAL_PERSON', courseId: courses[0].id, salespersonId: reps[0].id, amount: 80, saleDate: '2026-10-06T09:00:00.000Z', status: 'PAID' }), headers: { ...headers, 'Content-Type': 'application/json' } });
+  const saleResponse = await api('/api/certificate-sales', { ...json({ customerName: 'Vercel smoke test', customerType: 'NATURAL_PERSON', courseId: courses[0].id, salespersonId: reps[0].id, amount: 80, saleDate: '2026-10-06T09:00:00.000Z', status: 'EXECUTED' }), headers: { ...headers, 'Content-Type': 'application/json' } });
   assert.equal(saleResponse.status, 201);
   const sale = await saleResponse.json();
   created.push(`/api/certificate-sales/${sale.id}`);

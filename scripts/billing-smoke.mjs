@@ -16,12 +16,12 @@ try {
   const headers = {Cookie:login.headers.get('set-cookie').split(';')[0]};
   const dashboard = async () => {const r = await fetch(`${base}/api/dashboard?month=2&year=2099`,{headers});assert.equal(r.status,200);return r.json();};
   const before = await dashboard();
-  const common = {courseId:course.id,salespersonId:rep.id,company:`${tag} cliente`,serviceDate:new Date('2099-02-01T09:00:00Z')};
+  const common = {courseId:course.id,salespersonId:rep.id,company:`${tag} cliente`,invoicedAt:new Date('2099-02-01T09:00:00Z'),serviceDate:new Date('2099-02-01T09:00:00Z')};
   const first = await db.service.create({data:{...common,amount:'199999.70',status:'INVOICED'}});
   await db.service.create({data:{...common,company:`  ${tag}   CLIENTE  `,serviceDate:new Date('2099-02-12T09:00:00Z'),amount:'0.10',status:'INVOICED'}});
-  await db.service.create({data:{...common,amount:'0.20',status:'PAID'}});
-  await db.service.create({data:{...common,amount:'999',serviceDate:new Date('2099-03-01T09:00:00Z'),status:'INVOICED'}});
-  await db.certificateSale.create({data:{courseId:course.id,salespersonId:rep.id,customerName:`${tag} CLIENTE`,customerType:'COMPANY',amount:800,saleDate:new Date('2099-02-20T09:00:00Z'),status:'INVOICED'}});
+  await db.service.create({data:{...common,amount:'0.20',status:'EXECUTED'}});
+  await db.service.create({data:{...common,amount:'999',invoicedAt:new Date('2099-03-01T09:00:00Z'),serviceDate:new Date('2099-03-01T09:00:00Z'),status:'INVOICED'}});
+  await db.certificateSale.create({data:{courseId:course.id,salespersonId:rep.id,customerName:`${tag} CLIENTE`,invoicedAt:new Date('2099-02-20T09:00:00Z'),customerType:'COMPANY',amount:800,saleDate:new Date('2099-02-20T09:00:00Z'),status:'INVOICED'}});
   let after = await dashboard();
   assert.equal(after.totalServices,before.totalServices+3);
   assert.equal(after.totalUniqueCustomers,before.totalUniqueCustomers+1);
@@ -34,12 +34,12 @@ try {
   assert.equal((await dashboard()).totalInvoicedBilling,after.totalInvoicedBilling,'Agenda certificate copies and personal certificates must not increase invoiced billing');
   await db.certificateSale.updateMany({where:{salespersonId:rep.id,customerType:'COMPANY'},data:{amount:'0.20'}});
   assert.equal((await dashboard()).billingGoalAchieved,true,'Exact S/200000 reaches the monthly invoiced goal');
-  await db.service.update({where:{id:first.id},data:{status:'PAID',amount:'100'}});
+  await db.service.update({where:{id:first.id},data:{status:'EXECUTED',amount:'100'}});
   after = await dashboard();
   assert.equal(after.totalInvoicedBilling,before.totalInvoicedBilling+0.3);
   assert.equal(after.invoicedBySalesperson[tag],0.3);
   assert.equal(after.billingGoalAchieved,false);
-  await db.certificateSale.create({data:{courseId:course.id,salespersonId:rep.id,customerName:tag+' otro',customerType:'NATURAL_PERSON',amount:20,saleDate:new Date('2099-02-25T09:00:00Z'),status:'PAID'}});
+  await db.certificateSale.create({data:{courseId:course.id,salespersonId:rep.id,customerName:tag+' otro',customerType:'NATURAL_PERSON',amount:20,saleDate:new Date('2099-02-25T09:00:00Z'),status:'EXECUTED'}});
   assert.equal((await dashboard()).totalUniqueCustomers,before.totalUniqueCustomers+2);
   console.log('Billing smoke passed: monthly boundaries, exact money, invoiced states, salesperson totals, goal threshold and unique customers across dates/categories.');
 } finally {

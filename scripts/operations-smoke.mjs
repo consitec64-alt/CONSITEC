@@ -41,7 +41,7 @@ try {
   assert.equal(shared.find(rep => rep.id === reps[0].id).color, '#ab12cd');
   assert.equal((await api('/api/metadata/salespeople/missing', admin.cookie, 'PATCH', { color: '#abcdef' })).status, 404);
 
-  const saleBody = { customerName: tag, customerType: 'NATURAL_PERSON', amount: 100, saleDate: '2026-10-06T09:00:00.000Z', courseId: courses[0].id, salespersonId: reps[0].id, status: 'PAID' };
+  const saleBody = { customerName: tag, customerType: 'NATURAL_PERSON', amount: 100, saleDate: '2026-10-06T09:00:00.000Z', courseId: courses[0].id, salespersonId: reps[0].id, status: 'EXECUTED' };
   const saleResponse = await api('/api/certificate-sales', sales.cookie, 'POST', saleBody);
   assert.equal(saleResponse.status, 201);
   const sale = await saleResponse.json(); records.push({ model: 'certificateSale', id: sale.id });
@@ -64,7 +64,7 @@ try {
   assert.equal((await api('/api/certificate-sales/missing', admin.cookie, 'PATCH', changed)).status, 404);
   assert.equal((await fetch(new URL(`/api/certificate-sales/${sale.id}`, base), { method: 'PATCH', headers: { Cookie: sales.cookie, Origin: 'https://untrusted.example', 'Content-Type': 'application/json' }, body: JSON.stringify(changed) })).status, 403);
 
-  const serviceBody = { company: tag, amount: 125, serviceDate: '2026-10-06T09:00:00.000Z', courseId: courses[0].id, salespersonId: reps[0].id, instructorId: null, locationId: null, certificatesOnly: false, status: 'SCHEDULED' };
+  const serviceBody = { company: tag, correlativeCode: '0042', amount: 125, serviceDate: '2026-10-06T09:00:00.000Z', courseId: courses[0].id, salespersonId: reps[0].id, instructorId: null, locationId: null, certificatesOnly: false, status: 'SCHEDULED' };
   const serviceResponse = await api('/api/services', sales.cookie, 'POST', serviceBody);
   assert.equal(serviceResponse.status, 201);
   const service = await serviceResponse.json(); records.push({ model: 'service', id: service.id });

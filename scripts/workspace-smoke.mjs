@@ -1,0 +1,76 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {PrismaClient} from '@prisma/client';
+import bcrypt from 'bcrypt';
+const database=new URL(process.env.DATABASE_URL);
+assert(['localhost','127.0.0.1'].includes(database.hostname)&&database.pathname==='/consitec','Use the isolated local database');
+const db=new PrismaClient(),tag='workspace-'+randomUUID(),password=randomUUID();
+const base=process.env.SMOKE_BASE_URL||'http://127.0.0.1:3000';
+let user,course,rep,instructor,cookie;let checks=0;
+const api=async(path,method='GET',body)=>{checks++;return fetch(new URL(path,base),{method,redirect:'manual',headers:{...(cookie?{Cookie:cookie}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});};
+const dashboard=async(month,year=2097)=>{const response=await api(`/api/dashboard?month=${month}&year=${year}`);assert.equal(response.status,200);return response.json();};
+const list=async month=>(await api(`/api/services?month=${month}&year=2097`)).json();
+try {
+ user=await db.user.create({data:{username:tag,password:await bcrypt.hash(password,12),role:'ADMIN'}});
+ course=await db.course.create({data:{name:tag}});rep=await db.salesperson.create({data:{name:tag}});
+ assert.equal((await api('/api/instructors/availability?date=2097-11-02')).status,401);
+ const login=await api('/api/auth/login','POST',{username:tag,password});assert.equal(login.status,200);cookie=login.headers.get('set-cookie').split(';')[0];
+ const instructorData={name:tag,address:'Av. Ejemplo 123, Lima',dni:'DNI libre 123',courses:'ISO 9001; SST',emoExpiresAt:'2097-12-31',sctr:true,carModel:'Toyota Corolla',carPlate:'ABC-123'};
+ const createdInstructor=await api('/api/metadata/instructors','POST',instructorData);assert.equal(createdInstructor.status,201);instructor=await createdInstructor.json();
+ for(const field of ['address','dni','courses','sctr','carModel','carPlate'])assert.equal(instructor[field],instructorData[field]);
+ assert.equal(instructor.emoExpiresAt.slice(0,10),'2097-12-31');
+ assert.equal((await api(`/api/metadata/instructors/${instructor.id}`,'PATCH',{...instructorData,sctr:'yes'})).status,400);
+ assert.equal((await api(`/api/metadata/instructors/${instructor.id}`,'PATCH',{...instructorData,emoExpiresAt:'2097-02-30'})).status,400);
+ assert.equal((await api(`/api/metadata/instructors/${instructor.id}`,'PATCH',{...instructorData,sctr:false,carPlate:'XYZ-456'})).status,200);
+ const reloaded=(await (await api('/api/metadata/instructors')).json()).find(i=>i.id===instructor.id);assert.equal(reloaded.sctr,false);assert.equal(reloaded.carPlate,'XYZ-456');
+ const beforeOctober=await dashboard(10),beforeNovember=await dashboard(11);
+ const body={company:tag,correlativeCode:'0007',travelMode:'PLANE',serviceDates:['2097-10-31','2097-11-02','2097-11-01','2097-11-01'],amount:151.35,status:'SCHEDULED',instructorId:instructor.id,courseId:course.id,salespersonId:rep.id,locationId:null,certificatesOnly:false};
+ for(const bad of [{correlativeCode:''},{correlativeCode:'ABC1'},{correlativeCode:'12345'},{serviceDates:[]},{serviceDates:['2097-02-30']},{travelMode:'TRAIN'},{status:'PAID'}])assert.equal((await api('/api/services','POST',{...body,...bad})).status,400);
+ const firstResponse=await api('/api/services','POST',body);assert.equal(firstResponse.status,201);const first=await firstResponse.json();
+ assert.equal(first.correlativeCode,'0007');assert.equal(first.travelMode,'PLANE');assert.equal(first.dates.length,3);assert.equal(first.invoicedAt,null);assert.equal(first.serviceDate.slice(0,10),'2097-10-31');
+ assert.equal((await list(10)).filter(s=>s.id===first.id).length,1);assert.equal((await list(11)).filter(s=>s.id===first.id).length,1);
+ const october=await dashboard(10),november=await dashboard(11);
+ assert.equal(october.totalServices,beforeOctober.totalServices+1);assert.equal(november.totalServices,beforeNovember.totalServices+1);
+ assert.equal(october.totalEstimatedBilling,beforeOctober.totalEstimatedBilling+151.35);assert.equal(november.totalEstimatedBilling,beforeNovember.totalEstimatedBilling);
+ const conflict=await api('/api/services','POST',{...body,company:tag+' conflict',serviceDates:['2097-11-02']});assert.equal(conflict.status,409);assert.match((await conflict.json()).error,/no está disponible/);
+ const availability=await (await api('/api/instructors/availability?date=2097-11-02')).json();assert.deepEqual(availability.conflicts[instructor.id],['2097-11-02']);
+ assert.equal((await (await api(`/api/instructors/availability?date=2097-11-02&excludeServiceId=${first.id}`)).json()).conflicts[instructor.id],undefined);
+ const invoiceBody={...body,status:'INVOICED',invoiceDate:'2097-11-15'};
+ assert.equal((await api(`/api/services/${first.id}`,'PATCH',invoiceBody)).status,200);
+ assert.equal((await dashboard(10)).totalInvoicedBilling,beforeOctober.totalInvoicedBilling);
+ assert.equal((await dashboard(11)).totalInvoicedBilling,beforeNovember.totalInvoicedBilling+151.35);
+ assert.equal((await dashboard(11)).invoicedBySalesperson[tag],151.35);
+ // Moving agenda days and editing amounts must preserve the invoice month.
+ const moved={...body,serviceDates:['2097-12-01','2097-12-02'],status:'INVOICED',amount:175.25,invoiceDate:''};
+ const movedResponse=await api(`/api/services/${first.id}`,'PATCH',moved);assert.equal(movedResponse.status,200);assert.equal((await movedResponse.json()).invoicedAt.slice(0,10),'2097-11-15');
+ assert(!(await list(11)).some(s=>s.id===first.id));
+ const invoiceMonth=await dashboard(11);assert.equal(invoiceMonth.totalInvoicedBilling,beforeNovember.totalInvoicedBilling+175.25);assert(invoiceMonth.monthlyServices.some(s=>s.id===first.id));
+ assert.equal((await dashboard(12)).invoicedBySalesperson[tag],undefined);
+ assert.equal((await api(`/api/services/${first.id}`,'PATCH',{...moved,status:'EXECUTED'})).status,200);
+ assert.equal((await dashboard(11)).totalInvoicedBilling,beforeNovember.totalInvoicedBilling);
+ const automatic=await api(`/api/services/${first.id}`,'PATCH',{...moved,status:'INVOICED'});assert.equal(automatic.status,200);
+ const automaticData=await automatic.json();const limaToday=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());assert.equal(automaticData.invoicedAt.slice(0,10),limaToday);
+ const concurrent=await Promise.all([1,2].map(n=>api('/api/services','POST',{...body,company:tag+' race '+n,serviceDates:['2097-12-15'],travelMode:undefined})));
+ assert.deepEqual(concurrent.map(r=>r.status).sort(),[201,409],'Only one simultaneous instructor reservation may succeed');
+ const winning=await concurrent.find(r=>r.status===201).json();assert.equal(winning.travelMode,'NONE');
+ // Certificate sale and agenda copy must be atomic, and only company invoices count.
+ const saleBody={customerName:tag,customerType:'COMPANY',amount:800,courseId:course.id,salespersonId:rep.id,saleDate:'2097-10-31',status:'INVOICED',invoiceDate:'2097-11-20'};
+ const count=await db.certificateSale.count({where:{salespersonId:rep.id}});
+ assert.equal((await api('/api/certificate-sales','POST',saleBody)).status,400);assert.equal(await db.certificateSale.count({where:{salespersonId:rep.id}}),count);
+ const saleResponse=await api('/api/certificate-sales','POST',{...saleBody,correlativeCode:'0123'});assert.equal(saleResponse.status,201);const sale=await saleResponse.json();assert.equal(sale.invoicedAt.slice(0,10),'2097-11-20');
+ assert.equal(await db.service.count({where:{salespersonId:rep.id,certificatesOnly:true,correlativeCode:'0123'}}),1);
+ const expectedNovember=beforeNovember.totalInvoicedBilling+800;
+ assert.equal((await dashboard(11)).totalInvoicedBilling,expectedNovember);
+ assert.equal((await api(`/api/certificate-sales/${sale.id}`,'PATCH',{...saleBody,customerType:'NATURAL_PERSON'})).status,200);
+ assert.equal((await dashboard(11)).totalInvoicedBilling,beforeNovember.totalInvoicedBilling);
+ assert.equal((await api(`/api/certificate-sales/${sale.id}`,'PATCH',{...saleBody,status:'PAID'})).status,400);
+ assert.equal((await api('/api/certificate-sales','POST',{...saleBody,amount:10,status:'PAID'})).status,400);
+ await api(`/api/services/${first.id}`,'DELETE');assert.equal(await db.serviceDay.count({where:{serviceId:first.id}}),0);
+ console.log(`Workspace smoke passed: ${checks} requests; instructor details, strict codes, optional travel, multiple dates, atomic booking races, invoice-month accounting, preserved invoice dates, certificates and retired Paid state.`);
+} finally {
+ if(rep){await db.service.deleteMany({where:{salespersonId:rep.id}});await db.certificateSale.deleteMany({where:{salespersonId:rep.id}});await db.salesperson.delete({where:{id:rep.id}});}
+ if(instructor)await db.instructor.delete({where:{id:instructor.id}});
+ if(course)await db.course.delete({where:{id:course.id}});
+ if(user)await db.user.delete({where:{id:user.id}});
+ await db.$disconnect();
+}

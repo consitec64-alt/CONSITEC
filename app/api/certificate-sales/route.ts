@@ -2,7 +2,9 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { invoiceDateFor } from "@/lib/invoice-date";
+import { saleInput, serviceInput } from "@/lib/record-input";
+import { recordError } from "@/lib/record-error";
 
 // ✅ GET (para dashboard)
 export async function GET(req: Request) {
@@ -35,39 +37,24 @@ export async function GET(req: Request) {
   }
 }
 
-// ✅ POST (para crear venta)
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-
-    const {
-      courseId,
-      salespersonId,
-      saleDate,
-      amount,
-      customerName,
-      customerType,
-      status
-    } = body;
-
-    const createdSale = await prisma.certificateSale.create({
-      data: {
-        courseId,
-        salespersonId,
-        saleDate: saleDate ? new Date(saleDate) : new Date(),
-        amount: new Prisma.Decimal(amount),
-        customerName,
-        customerType,
-        status
-      },
+    const { requestedInvoiceDate, ...data } = saleInput(body);
+    // Create the agenda copy atomically, so retries cannot leave a half-saved sale.
+    const scheduled = data.amount.greaterThan(700) ? serviceInput({
+      ...data, amount: data.amount.toString(), company: data.customerName, certificatesOnly: true, instructorId: null,
+      locationId: null, serviceDate: data.saleDate.toISOString(), status: "SCHEDULED",
+      correlativeCode: body.correlativeCode
+    }) : null;
+    const created = await prisma.$transaction(async tx => {
+      const sale = await tx.certificateSale.create({ data: { ...data, invoicedAt: invoiceDateFor(data.status, requestedInvoiceDate) } });
+      if (scheduled) {
+        const { dates, requestedInvoiceDate: _invoice, ...service } = scheduled;
+        await tx.service.create({ data: { ...service, dates: { create: dates.map(date => ({ date })) } } });
+      }
+      return sale;
     });
-
-    return NextResponse.json(createdSale, { status: 201 });
-  } catch (err) {
-    console.error("Error en POST /certificate-sales:", err);
-    return NextResponse.json(
-      { error: "Error creando venta" },
-      { status: 500 }
-    );
-  }
+    return NextResponse.json(created, { status: 201 });
+  } catch (error) { return recordError(error); }
 }

@@ -1,5 +1,8 @@
 export type ServicePayload = {
   company: string;
+  correlativeCode: string;
+  travelMode?: "NONE" | "PLANE" | "BUS";
+  serviceDates?: string[];
   courseId: string;
   instructorId: string;
   locationId: string;
@@ -7,7 +10,7 @@ export type ServicePayload = {
   certificatesOnly: boolean;
   amount: number;
   serviceDate: string;
-  status: "SCHEDULED" | "EXECUTED" | "INVOICED" | "PAID";
+  status: "SCHEDULED" | "EXECUTED" | "INVOICED";
 };
 
 export type CertificateSalePayload = {
@@ -17,5 +20,5 @@ export type CertificateSalePayload = {
   salespersonId: string;
   amount: number;
   saleDate: string;
-  status: "SCHEDULED" | "EXECUTED" | "INVOICED" | "PAID";
+  status: "SCHEDULED" | "EXECUTED" | "INVOICED";
 };

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { invoiceDateFor } from "@/lib/invoice-date";
 import { saleInput, InvalidRecord } from "@/lib/record-input";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -10,7 +11,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 }); }
   try {
     const { id } = await params;
-    const updated = await prisma.certificateSale.update({ where: { id }, data: saleInput(body), include: { course: true, salesperson: true } });
+    const { requestedInvoiceDate, ...data } = saleInput(body);
+    const updated = await prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))::text`;
+      const existing = await tx.certificateSale.findUniqueOrThrow({ where: { id } });
+      return tx.certificateSale.update({ where: { id }, data: { ...data, invoicedAt: invoiceDateFor(data.status, requestedInvoiceDate, existing) }, include: { course: true, salesperson: true } });
+    });
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof InvalidRecord) return NextResponse.json({ error: error.message }, { status: 400 });
