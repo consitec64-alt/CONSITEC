@@ -29,6 +29,13 @@ model User {
   username String @unique
   password String
   role     Role
+  salespersonId String?
+  salesperson Salesperson? @relation(fields: [salespersonId], references: [id], onDelete: SetNull)
+}
+
+enum ClassModality {
+  VIRTUAL
+  IN_PERSON
 }
 
 enum TravelMode {
@@ -40,7 +47,8 @@ enum TravelMode {
 model Instructor {
   address      String?
   dni          String?
-  courses      String?
+  courseNotes  String?
+  courses      Course[] @relation("InstructorCourses")
   emoExpiresAt DateTime?
   sctr         Boolean @default(false)
   carModel     String?
@@ -55,12 +63,14 @@ model Course {
   name             String            @unique
   services         Service[]
   certificateSales CertificateSale[]
+  instructors      Instructor[] @relation("InstructorCourses")
 }
 
 model Salesperson {
   id               String            @id @default(cuid())
   name             String            @unique
   color            String            @default("#234eaa")
+  users            User[]
   services         Service[]
   certificateSales CertificateSale[]
 }
@@ -79,6 +89,7 @@ model Service {
   company          String
   correlativeCode  String?
   travelMode       TravelMode @default(NONE)
+  modality         ClassModality?
   dates            ServiceDay[]
   amount           Decimal       @db.Decimal(10, 2)
   serviceDate      DateTime
@@ -125,6 +136,8 @@ model CertificateSale {
 model ServiceDay {
   id        String @id @default(cuid())
   date      DateTime
+  startTime String?
+  endTime   String?
   serviceId String
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 

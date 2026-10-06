@@ -4,11 +4,11 @@
 
 En **Venta de certificados**, presiona el lápiz junto a la venta. El formulario
 muestra los valores actuales. Puedes cambiar cliente, tipo de cliente, curso,
-comercial, importe, fecha y estado; presiona **Guardar cambios**. Cancelar no
+importe, fecha y estado; presiona **Guardar cambios**. Cancelar no
 modifica el registro. Cambiar la fecha a otro mes mueve la venta a esa selección.
 
 En **Agenda de servicios**, el lápiz permite editar también cliente, curso,
-comercial, instructor, ubicación, importe, fecha, estado y tipo de servicio.
+instructor, ubicación, importe, fechas, horario, modalidad, estado y tipo de servicio.
 Los totales y el ranking se actualizan al guardar.
 
 Las ventas y los servicios son registros separados. Las ventas nuevas mayores a
@@ -21,9 +21,9 @@ separado si corresponde.
 Abre **Rendimiento comercial → Colores de comerciales**. Selecciona el color y
 presiona **Guardar color**. Se aplica a la barra del ranking y al gráfico de
 actividad por comercial. El color se guarda en PostgreSQL y lo comparte todo el
-equipo; permanece al recargar y cambiar de equipo o navegador. Ambos roles
-pueden cambiar colores. Las cuentas de acceso y el catálogo de comerciales son
-independientes, por lo que el selector incluye todos los comerciales del catálogo.
+equipo; permanece al recargar y cambiar de equipo o navegador. Solo los
+administradores pueden cambiar colores y gestionar el catálogo de comerciales.
+Los vendedores pueden consultar el ranking, pero no ven el catálogo en Base de soporte.
 
 La migración `20261006170000_salesperson_color` agrega `Salesperson.color` con un
 valor inicial azul. Vercel aplica migraciones antes de compilar; sus variables de
@@ -91,10 +91,11 @@ sea único ni se genera automáticamente. Los registros antiguos se muestran com
 **Sin código** hasta que se completen al editar; no se inventan correlativos.
 
 **Viáticos** es opcional: No aplica, Avión o Bus. **Agregar fecha** permite repetir
-un mismo servicio en varias fechas sin crear otro registro ni copiar su importe.
-Las fechas repetidas se unifican al guardar. Quitar una fecha elimina esa
-ocurrencia de la agenda. Cada servicio conserva un solo estado, instructor,
-comercial e importe para todas sus fechas.
+las jornadas de un registro sin copiar su importe. **Cada fecha cuenta como un
+servicio** en las metas 45/70, ranking y avance semanal del mes correspondiente.
+No repitas una fecha en el formulario. Quitar una fecha elimina esa jornada de la
+agenda. El registro conserva un solo estado, instructor, comercial e importe.
+El importe total se suma una sola vez, en su mes de facturación cuando corresponde.
 
 Las ventas nuevas de certificados mayores a S/700 requieren un correlativo para
 su copia de agenda. La venta y su servicio se guardan juntos en una transacción;
@@ -111,7 +112,8 @@ fechas y el instructor seleccionado pasa a estar ocupado, aparece una advertenci
 La API vuelve a comprobar disponibilidad al guardar y devuelve un conflicto con
 el instructor y la fecha. Las reservas del mismo instructor se serializan en
 PostgreSQL para impedir dos asignaciones simultáneas al mismo día. La regla es
-por día completo; no existen turnos u horarios en este modelo. Instructor sigue
+por día completo: los horarios calculan duración, pero no permiten reservar
+dos servicios del mismo instructor en el mismo día. Instructor sigue
 siendo opcional y puedes guardar un servicio sin asignarlo.
 
 ## Resumen mensual por comercial
@@ -127,11 +129,41 @@ empresas están incluidas en la columna Total facturado del panel superior.
 ## Fichas de instructores
 
 En **Base de soporte → Instructores**, despliega un nombre para consultar y editar
-su ficha. Incluye dirección, DNI y cursos como texto libre, fecha de vencimiento
+su ficha. Incluye dirección y DNI como texto libre, selección de cursos del catálogo, fecha de vencimiento
 del EMO y SCTR Sí/No. **Auto** despliega modelo y placa. Solo el nombre es
 obligatorio; los demás campos se pueden dejar vacíos. **Agregar instructor** abre
 la misma ficha para un instructor nuevo. No se modifican cursos ni servicios
 existentes al actualizar estos datos.
+
+## Modalidad y duración por jornada
+
+Selecciona **Virtual** o **Presencial** y escribe inicio y fin en formato **HH:mm**
+(00:00–23:59) en cada fecha. El fin debe ser posterior al inicio dentro del mismo
+día. La duración descuenta **1 hora de descanso solo cuando supera 5 horas**:
+09:00–14:00 = 5 h; 09:00–15:00 = 5 h de clase y 1 h de descanso;
+08:30–13:31 = 4 h 1 min de clase. El formulario muestra cada duración y el total
+sin los descansos. Estos horarios no duplican ni reparten el importe.
+
+Los datos antiguos conservan modalidad y horarios vacíos hasta que se completen
+al editar. Los cursos escritos anteriormente se conservan como una nota visible;
+selecciona los cursos correspondientes del catálogo para vincularlos correctamente.
+
+## Comercial asignado a la cuenta
+
+Un administrador abre **Usuarios**, elige el comercial de cada cuenta y pulsa
+**Guardar comercial**. Las nuevas cuentas requieren asignación. Las cuentas
+anteriores siguen accediendo al panel, pero necesitan asignación antes de crear
+ventas o servicios. No se adivinan asignaciones a partir de nombres o roles.
+
+El formulario muestra el comercial automáticamente; ya no permite elegirlo.
+El servidor utiliza la asignación vigente en PostgreSQL, aunque la sesión se
+haya iniciado antes de cambiarla. Editar una venta o servicio conserva su
+comercial original. Cambiar la asignación de una cuenta afecta solo registros
+nuevos; eliminar una cuenta no elimina sus ventas.
+
+La migración `20261006220000_user_assignment_class_sessions` agrega las relaciones
+de usuarios y cursos, modalidad y horarios. Conserva los cursos anteriores como
+notas; no inventa cursos, horarios ni comerciales para registros históricos.
 
 ## Navegación y temas
 
@@ -172,6 +204,7 @@ comprobaciones de totales de otra prueba:
 ```sh
 SMOKE_BASE_URL=http://127.0.0.1:3000 node --env-file=.env scripts/billing-smoke.mjs
 SMOKE_BASE_URL=http://127.0.0.1:3000 node --env-file=.env scripts/workspace-smoke.mjs
+SMOKE_BASE_URL=http://127.0.0.1:3000 node --env-file=.env scripts/assignment-sessions-smoke.mjs
 ```
 
 El segundo prueba fichas, códigos obligatorios, viáticos opcionales, fechas

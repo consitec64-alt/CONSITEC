@@ -1,8 +1,10 @@
+import { AssignmentRequired } from "@/lib/assigned-salesperson";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { InvalidRecord } from "@/lib/record-input";
 import { InstructorUnavailable } from "@/lib/service-scheduling";
 export function recordError(error: unknown) {
+  if (error instanceof AssignmentRequired) return NextResponse.json({ error: error.message }, { status: 409 });
   if (error instanceof InstructorUnavailable) return NextResponse.json({ error: error.message }, { status: 409 });
   if (error instanceof InvalidRecord || error instanceof SyntaxError) return NextResponse.json({ error: error instanceof InvalidRecord ? error.message : "Solicitud inválida" }, { status: 400 });
   if (error instanceof Prisma.PrismaClientKnownRequestError) {

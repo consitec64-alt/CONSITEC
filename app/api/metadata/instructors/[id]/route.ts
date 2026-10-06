@@ -16,6 +16,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   }
 }
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  try { return NextResponse.json(await prisma.instructor.update({ where: { id: (await params).id }, data: instructorInput(await req.json()) })); }
+  try { return NextResponse.json(await prisma.instructor.update({ where: { id: (await params).id }, data: instructorInput(await req.json()), include: { courses: true } })); }
   catch (error) { return recordError(error); }
 }

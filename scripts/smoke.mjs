@@ -1,9 +1,17 @@
 import assert from 'node:assert/strict';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import { randomUUID } from 'node:crypto';
 import { SignJWT } from 'jose/jwt/sign';
 
 const base = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3000';
-const username = process.env.SMOKE_USERNAME || process.env.ADMIN_USERNAME || 'admin';
-const password = process.env.SMOKE_PASSWORD || process.env.ADMIN_PASSWORD;
+const database = new URL(process.env.DATABASE_URL);
+assert(['localhost','127.0.0.1'].includes(database.hostname) && database.pathname === '/consitec', 'Use the isolated local database');
+const prisma = new PrismaClient();
+const password = randomUUID();
+const fixture = await prisma.user.create({ data: { username: 'smoke-'+randomUUID(), password: await bcrypt.hash(password,12), role: 'ADMIN', salespersonId: (await prisma.salesperson.findFirstOrThrow()).id } });
+const username = fixture.username;
+try {
 if (!password) throw new Error('Set SMOKE_PASSWORD (or ADMIN_PASSWORD) for an isolated test database');
 const api = (path, options = {}) => fetch(new URL(path, base), { redirect: 'manual', ...options });
 const json = (body) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -63,3 +71,5 @@ assert.equal(logout.status, 200);
 assert.match(logout.headers.get('set-cookie'), /consitec_session=;/);
 assert.equal((await api('/api/metadata/courses')).status, 401);
 console.log('Smoke passed: authentication, protected pages/APIs, middleware bypass, CSRF, cookies, PostgreSQL reads/writes, dashboard totals, and logout.');
+
+} finally { await prisma.user.deleteMany({where:{id:fixture.id}}); await prisma.$disconnect(); }

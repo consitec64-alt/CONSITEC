@@ -129,3 +129,10 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 .service-item>span:not(.status){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .service-item .split>small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.service-item .split>b{white-space:nowrap}
 [data-theme=dark] th{background:var(--soft)}
+
+/* Class schedules and instructor course catalog */
+.class-session{padding:12px 0;border-bottom:1px solid var(--border);display:grid;gap:8px}.class-session-fields{display:grid;grid-template-columns:minmax(130px,1.3fr) minmax(95px,1fr) minmax(95px,1fr) auto;gap:12px;align-items:end}.class-session small{color:var(--muted)}.instructor-courses{border:1px solid var(--border);border-radius:10px;padding:14px;display:grid;gap:10px;max-height:250px;overflow:auto}.instructor-courses legend{font-weight:600;padding:0 5px}.assigned-commercial{display:grid;gap:5px;padding:12px;border:1px solid var(--border);border-radius:10px}.assigned-commercial span,.assigned-commercial small{color:var(--muted)}.user-email-form+.user-email-form{margin-top:16px}
+@media(max-width:540px){.class-session-fields{grid-template-columns:1fr 1fr}.class-session-fields>label:first-child{grid-column:1/-1}.class-session-fields>.icon-button{grid-column:2;justify-self:end}.users-form{grid-template-columns:1fr}}
+
+.service-item>small{display:block}.user-account .user-identity{grid-row:span 2}
+@media(max-width:760px){.user-account .user-identity{grid-row:auto}}

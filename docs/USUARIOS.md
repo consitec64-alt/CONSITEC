@@ -2,7 +2,7 @@
 
 Inicia sesión con una cuenta Administrador y abre **Usuarios** en el menú del
 panel. Completa el correo electrónico, una contraseña de al menos 12 caracteres
-(máximo 72 bytes) y el rol. Presiona **Crear usuario**. La cuenta puede iniciar
+(máximo 72 bytes), el rol y el comercial asignado. Presiona **Crear usuario**. La cuenta puede iniciar
 sesión inmediatamente con su correo y contraseña. Comparte las credenciales por
 un canal privado.
 
@@ -20,16 +20,29 @@ correo nuevo y su contraseña actual. La sesión abierta se conserva. Verifica e
 correo antes de guardarlo; un administrador puede corregirlo desde esta pantalla.
 
 Se utiliza el campo de acceso existente `User.username` para almacenar el correo,
-por lo que no se necesitan migraciones ni nuevas variables de entorno. No vuelvas
+sin cambiar su contraseña ni requerir nuevas variables de entorno. La asignación
+de comercial sí requiere la migración de relaciones incluida en esta versión. No vuelvas
 a ejecutar el seed de administrador después de cambiar su nombre de acceso: el
 seed busca ADMIN_USERNAME (por defecto admin) y podría crear otra cuenta admin.
 El build normal de Vercel no ejecuta ese seed.
 
 Solo los administradores pueden listar, crear cuentas, cambiar correos y eliminar usuarios. El
 permiso se comprueba contra la base de datos en cada operación. Ambos roles
-conservan acceso a las funciones comerciales existentes. Crear una cuenta no
+conservan acceso a la operación comercial; solo Administrador puede ver y
+modificar el catálogo de comerciales en Base de soporte. Crear una cuenta no
 agrega un registro al catálogo de comerciales; ese catálogo se administra en
 Base de soporte. Esta versión no incluye recuperación de contraseñas.
+
+## Asignar un comercial
+
+En **Cuentas existentes**, selecciona el **Comercial** de la cuenta y pulsa
+**Guardar comercial**. Puedes hacerlo sin cambiar su correo o contraseña,
+incluso para `admin`. Crea primero el comercial en **Base de soporte** si falta.
+
+Cada nueva venta o servicio se guarda automáticamente con esa asignación.
+Cambiarla no mueve registros históricos. Las cuentas antiguas sin asignación
+pueden consultar y editar, pero no crear ventas hasta recibirla. Varias cuentas
+pueden compartir un comercial; cada cuenta tiene como máximo uno asignado.
 
 ## Eliminar usuarios
 

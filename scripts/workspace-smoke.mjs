@@ -13,11 +13,13 @@ const list=async month=>(await api(`/api/services?month=${month}&year=2097`)).js
 try {
  user=await db.user.create({data:{username:tag,password:await bcrypt.hash(password,12),role:'ADMIN'}});
  course=await db.course.create({data:{name:tag}});rep=await db.salesperson.create({data:{name:tag}});
+ await db.user.update({where:{id:user.id},data:{salespersonId:rep.id}});
  assert.equal((await api('/api/instructors/availability?date=2097-11-02')).status,401);
  const login=await api('/api/auth/login','POST',{username:tag,password});assert.equal(login.status,200);cookie=login.headers.get('set-cookie').split(';')[0];
- const instructorData={name:tag,address:'Av. Ejemplo 123, Lima',dni:'DNI libre 123',courses:'ISO 9001; SST',emoExpiresAt:'2097-12-31',sctr:true,carModel:'Toyota Corolla',carPlate:'ABC-123'};
+ const instructorData={name:tag,address:'Av. Ejemplo 123, Lima',dni:'DNI libre 123',courseIds:[course.id],emoExpiresAt:'2097-12-31',sctr:true,carModel:'Toyota Corolla',carPlate:'ABC-123'};
  const createdInstructor=await api('/api/metadata/instructors','POST',instructorData);assert.equal(createdInstructor.status,201);instructor=await createdInstructor.json();
- for(const field of ['address','dni','courses','sctr','carModel','carPlate'])assert.equal(instructor[field],instructorData[field]);
+ for(const field of ['address','dni','sctr','carModel','carPlate'])assert.equal(instructor[field],instructorData[field]);
+ assert.deepEqual(instructor.courses.map(c=>c.id),[course.id]);
  assert.equal(instructor.emoExpiresAt.slice(0,10),'2097-12-31');
  assert.equal((await api(`/api/metadata/instructors/${instructor.id}`,'PATCH',{...instructorData,sctr:'yes'})).status,400);
  assert.equal((await api(`/api/metadata/instructors/${instructor.id}`,'PATCH',{...instructorData,emoExpiresAt:'2097-02-30'})).status,400);
@@ -30,7 +32,7 @@ try {
  assert.equal(first.correlativeCode,'0007');assert.equal(first.travelMode,'PLANE');assert.equal(first.dates.length,3);assert.equal(first.invoicedAt,null);assert.equal(first.serviceDate.slice(0,10),'2097-10-31');
  assert.equal((await list(10)).filter(s=>s.id===first.id).length,1);assert.equal((await list(11)).filter(s=>s.id===first.id).length,1);
  const october=await dashboard(10),november=await dashboard(11);
- assert.equal(october.totalServices,beforeOctober.totalServices+1);assert.equal(november.totalServices,beforeNovember.totalServices+1);
+ assert.equal(october.totalServices,beforeOctober.totalServices+1);assert.equal(november.totalServices,beforeNovember.totalServices+2);
  assert.equal(october.totalEstimatedBilling,beforeOctober.totalEstimatedBilling+151.35);assert.equal(november.totalEstimatedBilling,beforeNovember.totalEstimatedBilling);
  const conflict=await api('/api/services','POST',{...body,company:tag+' conflict',serviceDates:['2097-11-02']});assert.equal(conflict.status,409);assert.match((await conflict.json()).error,/no está disponible/);
  const availability=await (await api('/api/instructors/availability?date=2097-11-02')).json();assert.deepEqual(availability.conflicts[instructor.id],['2097-11-02']);

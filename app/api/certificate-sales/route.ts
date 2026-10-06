@@ -1,5 +1,7 @@
 export const dynamic = "force-dynamic";
 
+import { currentUser } from "@/lib/current-user";
+import { assignedSalesperson } from "@/lib/assigned-salesperson";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { invoiceDateFor } from "@/lib/invoice-date";
@@ -39,6 +41,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const actor = await currentUser();
     const body = await req.json();
     const { requestedInvoiceDate, ...data } = saleInput(body);
     // Create the agenda copy atomically, so retries cannot leave a half-saved sale.
@@ -48,10 +51,11 @@ export async function POST(req: Request) {
       correlativeCode: body.correlativeCode
     }) : null;
     const created = await prisma.$transaction(async tx => {
-      const sale = await tx.certificateSale.create({ data: { ...data, invoicedAt: invoiceDateFor(data.status, requestedInvoiceDate) } });
+      const salespersonId = await assignedSalesperson(tx, actor?.id);
+      const sale = await tx.certificateSale.create({ data: { ...data, salespersonId, invoicedAt: invoiceDateFor(data.status, requestedInvoiceDate) } });
       if (scheduled) {
-        const { dates, requestedInvoiceDate: _invoice, ...service } = scheduled;
-        await tx.service.create({ data: { ...service, dates: { create: dates.map(date => ({ date })) } } });
+        const { dates: _dates, sessions, requestedInvoiceDate: _invoice, ...service } = scheduled;
+        await tx.service.create({ data: { ...service, salespersonId, dates: { create: sessions } } });
       }
       return sale;
     });

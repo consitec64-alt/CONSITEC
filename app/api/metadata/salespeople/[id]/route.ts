@@ -1,10 +1,12 @@
 export const dynamic = "force-dynamic";
 
+import { adminOnly } from "@/lib/admin-only";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const denied = await adminOnly(); if (denied) return denied;
   let body;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 }); }
   if (typeof body?.color !== "string" || !/^#[0-9a-f]{6}$/i.test(body.color)) {
@@ -26,6 +28,7 @@ export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await adminOnly(); if (denied) return denied;
   try {
     const id = (await params).id;
 

@@ -48,7 +48,10 @@ export async function GET(req: Request) {
       const name = s.salesperson.name;
       invoicedBySalesperson[name] = new Prisma.Decimal(invoicedBySalesperson[name] ?? 0).plus(s.amount).toNumber();
     }
-    const totalServices = services.length;
+    const daysInMonth = (s: typeof services[number]) => [...new Map((s.dates.length ? s.dates.map(d => d.date) : [s.serviceDate]).filter(d => d >= start && d < end).map(d => [d.toISOString().slice(0, 10), d])).values()];
+    const totalServices = services.reduce((sum, s) => sum + daysInMonth(s).length, 0);
+    // Public report identity/color only; the commercial support catalog remains admin-only.
+    const reportSalespeople = await prisma.salesperson.findMany({ select: { id: true, name: true, color: true }, orderBy: { name: "asc" } });
     const totalEstimatedBilling = billingServices.reduce(
       (acc, s) => acc.plus(s.amount),
       new Prisma.Decimal(0)
@@ -67,7 +70,7 @@ export async function GET(req: Request) {
 
     for (const s of services) {
       const rep = s.salesperson?.name ?? "Sin comercial";
-      const activityDate = [s.serviceDate, ...s.dates.map(d => d.date)].filter(d => d >= start && d < end).sort((a, b) => a.getTime() - b.getTime())[0];
+      for (const activityDate of daysInMonth(s)) {
       const weekLabel = `Week ${weekOfMonth(activityDate)}`;
 
       bySalesperson[rep] = (bySalesperson[rep] ?? 0) + 1;
@@ -93,6 +96,7 @@ export async function GET(req: Request) {
       }
 
       weeklyMatrix[rep][weekLabel] += 1;
+      }
     }
 
     const ranking = Object.entries(bySalesperson).sort(
@@ -106,6 +110,7 @@ export async function GET(req: Request) {
       Object.entries(byInstructor).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "-";
 
     return NextResponse.json({
+      reportSalespeople,
       monthlyServices,
       totalServices,
       totalEstimatedBilling,

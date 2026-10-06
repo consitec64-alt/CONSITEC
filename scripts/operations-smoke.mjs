@@ -30,11 +30,12 @@ try {
   const courses = await (await api('/api/metadata/courses', admin.cookie)).json();
   const reps = await (await api('/api/metadata/salespeople', admin.cookie)).json();
   assert(courses.length >= 2 && reps.length >= 2);
+  await prisma.user.update({where:{id:sales.id},data:{salespersonId:reps[0].id}});
   restoreColor = { id: reps[0].id, color: reps[0].color };
   assert.match(reps[0].color, /^#[0-9a-f]{6}$/);
   assert.equal((await api(`/api/metadata/salespeople/${reps[0].id}`, null, 'PATCH', { color: '#abcdef' })).status, 401);
-  assert.equal((await api(`/api/metadata/salespeople/${reps[0].id}`, sales.cookie, 'PATCH', { color: 'url(untrusted)' })).status, 400);
-  const color = await api(`/api/metadata/salespeople/${reps[0].id}`, sales.cookie, 'PATCH', { color: '#AB12CD' });
+  assert.equal((await api(`/api/metadata/salespeople/${reps[0].id}`, sales.cookie, 'PATCH', { color: 'url(untrusted)' })).status, 403);
+  const color = await api(`/api/metadata/salespeople/${reps[0].id}`, admin.cookie, 'PATCH', { color: '#AB12CD' });
   assert.equal(color.status, 200);
   assert.equal((await color.json()).color, '#ab12cd');
   const shared = await (await api('/api/metadata/salespeople', otherAdmin.cookie)).json();
@@ -53,7 +54,7 @@ try {
   const result = await edited.json();
   assert.equal(result.id, sale.id); assert.equal(result.customerName, changed.customerName);
   assert.equal(result.customerType, 'COMPANY'); assert.equal(Number(result.amount), 875.25);
-  assert.equal(result.course.id, courses[1].id); assert.equal(result.salesperson.id, reps[1].id);
+  assert.equal(result.course.id, courses[1].id); assert.equal(result.salesperson.id, reps[0].id);
   assert.equal(result.status, 'INVOICED'); assert.equal(result.saleDate, changed.saleDate);
   assert.equal(await prisma.service.count(), beforeServices, 'Editing must not duplicate scheduled services');
   assert(!(await (await api('/api/certificate-sales?month=10&year=2026', admin.cookie)).json()).some(item => item.id === sale.id));

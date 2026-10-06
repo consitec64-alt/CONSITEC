@@ -1,3 +1,4 @@
+import { assignedSalesperson } from "@/lib/assigned-salesperson";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { invoiceDateFor } from "@/lib/invoice-date";
@@ -15,11 +16,12 @@ export function datesWhere(days: Date[]): Prisma.ServiceWhereInput {
   }) };
 }
 export class InstructorUnavailable extends Error {}
-export async function writeService(body: Record<string, unknown>, id?: string) {
-  const { dates, requestedInvoiceDate, ...data } = serviceInput(body);
+export async function writeService(body: Record<string, unknown>, id?: string, userId?: string) {
+  const { dates, sessions, requestedInvoiceDate, ...data } = serviceInput(body);
   return prisma.$transaction(async tx => {
     if (id) await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))::text`;
     const existing = id ? await tx.service.findUniqueOrThrow({ where: { id } }) : undefined;
+    const salespersonId = existing?.salespersonId ?? await assignedSalesperson(tx, userId);
     const invoicedAt = invoiceDateFor(data.status, requestedInvoiceDate, existing);
     if (data.instructorId) {
       // Serialize bookings for this instructor before checking every selected day.
@@ -34,7 +36,7 @@ export async function writeService(body: Record<string, unknown>, id?: string) {
         throw new InstructorUnavailable(`${conflict.instructor?.name || "El instructor"} no está disponible para la fecha: ${occupied}`);
       }
     }
-    if (id) return tx.service.update({ where: { id }, data: { ...data, invoicedAt, dates: { deleteMany: {}, create: dates.map(date => ({ date })) } }, include: serviceInclude });
-    return tx.service.create({ data: { ...data, invoicedAt, dates: { create: dates.map(date => ({ date })) } }, include: serviceInclude });
+    if (id) return tx.service.update({ where: { id }, data: { ...data, salespersonId, invoicedAt, dates: { deleteMany: {}, create: sessions } }, include: serviceInclude });
+    return tx.service.create({ data: { ...data, salespersonId, invoicedAt, dates: { create: sessions } }, include: serviceInclude });
   });
 }

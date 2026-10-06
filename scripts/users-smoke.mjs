@@ -26,6 +26,7 @@ try {
   const fixture = await prisma.user.create({ data: { username: adminName, password: await bcrypt.hash(password, 12), role: 'ADMIN' } });
   ids.push(fixture.id);
   const admin = await login(adminName, password);
+  const rep = await prisma.salesperson.findFirstOrThrow();
   const email = `${prefix}@example.test`;
   assert.equal((await call('/api/users')).status, 401);
   assert.equal((await call('/api/users', null, { email, password, role: 'SALES' })).status, 401);
@@ -45,16 +46,16 @@ try {
   ]) assert.equal((await call('/api/users', admin, body)).status, 400);
   for (const role of ['SALES', 'ADMIN']) {
     const address = `${prefix}-${role.toLowerCase()}@example.test`;
-    const res = await call('/api/users', admin, { email: ` ${address.toUpperCase()} `, password, role });
+    const res = await call('/api/users', admin, { email: ` ${address.toUpperCase()} `, password, role, salespersonId: rep.id });
     assert.equal(res.status, 201);
     const account = await res.json();
     ids.push(account.id);
-    assert.deepEqual(Object.keys(account).sort(), ['id', 'role', 'username']);
+    assert.deepEqual(Object.keys(account).sort(), ['id', 'role', 'salesperson', 'salespersonId', 'username']);
     assert.equal(account.username, address);
     const stored = await prisma.user.findUnique({ where: { id: account.id } });
     assert.notEqual(stored.password, password);
     assert(await bcrypt.compare(password, stored.password));
-    assert.equal((await call('/api/users', admin, { email: address.toUpperCase(), password, role })).status, 409);
+    assert.equal((await call('/api/users', admin, { email: address.toUpperCase(), password, role, salespersonId: rep.id })).status, 409);
     const cookie = await login(` ${address.toUpperCase()} `, password);
     if (role === 'SALES') {
       assert.equal((await call('/api/users', cookie)).status, 403);

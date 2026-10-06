@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { agendaWhere, serviceInclude, writeService } from "@/lib/service-scheduling";
+import { currentUser } from "@/lib/current-user";
 import { recordError } from "@/lib/record-error";
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -14,6 +15,6 @@ export async function GET(req: Request) {
   return NextResponse.json(services);
 }
 export async function POST(req: Request) {
-  try { return NextResponse.json(await writeService(await req.json()), { status: 201 }); }
+  try { return NextResponse.json(await writeService(await req.json(), undefined, (await currentUser())?.id), { status: 201 }); }
   catch (error) { return recordError(error); }
 }

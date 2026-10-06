@@ -6,7 +6,7 @@ import { Trash2 } from "lucide-react";
 import ThemeToggle from "@/components/theme-toggle";
 import Brand from "@/components/brand";
 
-type User = { id: string; username: string; role: "ADMIN" | "SALES" };
+type User = { id: string; username: string; role: "ADMIN" | "SALES"; salespersonId: string | null; salesperson: { id: string; name: string } | null };
 async function request(url: string, options?: RequestInit) {
   const res = await fetch(url, options);
   if (res.status === 401) { window.location.assign("/login"); throw new Error("Inicia sesión nuevamente."); }
@@ -17,6 +17,7 @@ async function request(url: string, options?: RequestInit) {
 
 export default function UsersPanel() {
   const [users, setUsers] = useState<User[]>([]);
+  const [salespeople, setSalespeople] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -29,8 +30,8 @@ export default function UsersPanel() {
   async function load() {
     setLoading(true);
     try {
-      const [accounts, current] = await Promise.all([request("/api/users"), request("/api/auth/me")]);
-      setUsers(accounts); setCurrentId(current.id);
+      const [accounts, current, commercials] = await Promise.all([request("/api/users"), request("/api/auth/me"), request("/api/metadata/salespeople")]);
+      setUsers(accounts); setCurrentId(current.id); setSalespeople(commercials);
     }
     finally { setLoading(false); }
   }
@@ -60,7 +61,7 @@ export default function UsersPanel() {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values)
       });
       setUsers(previous => previous.map(item => item.id === user.id ? user : item).sort((a, b) => a.username.localeCompare(b.username)));
-      setNotice(`Correo guardado. Esta cuenta ahora inicia sesión con ${user.username} y su contraseña actual.`);
+      setNotice(values.salespersonId ? `Comercial asignado a ${user.username}. Las nuevas ventas usarán esta asignación; los registros anteriores se conservan.` : `Correo guardado. Esta cuenta ahora inicia sesión con ${user.username} y su contraseña actual.`);
     } catch (err) { setError(err instanceof Error ? err.message : "No se pudo actualizar el correo."); }
     finally { setBusy(false); }
   }
@@ -77,7 +78,7 @@ export default function UsersPanel() {
   }
   return <main className="page-content users-page">
     <Link href="/dashboard" className="text-button">← Volver al panel</Link>
-    <div className="page-heading"><div><div className="users-title"><h1>Usuarios</h1><ThemeToggle /></div><p>Crea cuentas para acceder a CONSITEC.</p></div><Brand href="/dashboard" className="brand-compact" /></div>
+    <div className="page-heading"><div><div className="users-title"><h1>Usuarios</h1><ThemeToggle /></div><p>Crea cuentas y asigna el comercial de cada usuario.</p></div><Brand href="/dashboard" className="brand-compact" /></div>
     {error && <p className="error-banner" role="alert">{error}</p>}
     {notice && <p className="users-notice" role="status">{notice}</p>}
     <section className="panel"><div className="section-heading"><h2>Crear usuario</h2></div>
@@ -85,7 +86,8 @@ export default function UsersPanel() {
         <label className="users-field">Correo electrónico<input name="email" type="email" autoComplete="off" autoCapitalize="none" required maxLength={254} placeholder="nombre@empresa.com" /><small>Será el correo para iniciar sesión.</small></label>
         <label className="users-field">Contraseña<input name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={72} /><small>Al menos 12 caracteres; máximo 72 bytes.</small></label>
         <label className="users-field">Rol<select name="role" defaultValue="SALES"><option value="SALES">Vendedor</option><option value="ADMIN">Administrador</option></select></label>
-        <div className="users-form-footer"><p className="form-note">Los administradores pueden crear usuarios. Ambos roles tienen acceso a la operación comercial. Las cuentas de acceso son independientes del catálogo de comerciales.</p>
+        <label className="users-field">Comercial asignado<select name="salespersonId" defaultValue="" required><option value="">Selecciona un comercial</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label>
+        <div className="users-form-footer"><p className="form-note">Los administradores pueden crear usuarios. Ambos roles tienen acceso a la operación comercial. Cada cuenta registra automáticamente las nuevas ventas a nombre de su comercial asignado.</p>
         <button className="btn" disabled={busy}>{busy ? "Creando…" : "Crear usuario"}</button></div>
       </form>
     </section>
@@ -98,7 +100,7 @@ export default function UsersPanel() {
         <input type="hidden" name="id" value={user.id} />
         <label className="users-field">Correo de {user.username}<input name="email" type="email" autoComplete="off" autoCapitalize="none" required maxLength={254} defaultValue={user.username.includes("@") ? user.username : ""} placeholder="nombre@empresa.com" /></label>
         <button className="btn secondary" disabled={busy}>{busy ? "Guardando…" : "Guardar correo"}</button>
-      </form></li>)}</ul>}
+      </form><form className="user-email-form" onSubmit={updateEmail}><input type="hidden" name="id" value={user.id} /><label className="users-field">Comercial de {user.username}<select name="salespersonId" defaultValue={user.salespersonId || ''} required><option value="">Sin asignar</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label><button className="btn secondary" disabled={busy}>Guardar comercial</button></form></li>)}</ul>}
     </section>
     {deleteTarget && <dialog ref={deleteDialog} className="dialog users-delete-dialog" aria-labelledby="delete-user-title" onCancel={e => { if (busy) e.preventDefault(); else setDeleteTarget(null); }}>
       <div className="section-heading"><h2 id="delete-user-title">Eliminar usuario</h2></div>
