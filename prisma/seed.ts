@@ -1,13 +1,23 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  await prisma.user.upsert({
-    where: { username: "admin" },
-    update: {},
-    create: { id: "admin001", username: "admin", password: "admin123", role: "ADMIN" }
-  });
+  const username = process.env.ADMIN_USERNAME || "admin";
+  const existing = await prisma.user.findUnique({ where: { username } });
+  if (!existing || !/^\$2[aby]\$\d{2}\$/.test(existing.password)) {
+    const password = process.env.ADMIN_PASSWORD;
+    if (!password || password.length < 12 || Buffer.byteLength(password) > 72) {
+      throw new Error("Set ADMIN_PASSWORD (12 characters minimum, 72 bytes maximum) to provision the administrator");
+    }
+    const hashed = await bcrypt.hash(password, 12);
+    await prisma.user.upsert({
+      where: { username },
+      update: { password: hashed, role: "ADMIN" },
+      create: { username, password: hashed, role: "ADMIN" }
+    });
+  }
 
   const names = ["FIORELLA", "INGRIT", "VALERIA", "CRISTHIAN", "ABIGAIL", "NEW ADVISOR"];
   for (const name of names) {
@@ -37,4 +47,7 @@ async function main() {
   }
 }
 
-main().finally(() => prisma.$disconnect());
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : "Seed failed");
+  process.exitCode = 1;
+}).finally(() => prisma.$disconnect());

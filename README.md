@@ -3,7 +3,7 @@
 Professional internal web application for monthly control of training services and certificate-only sales.
 
 ## Stack
-- Next.js 14 + React 18
+- Next.js 15 + React 18
 - API Routes (Node runtime)
 - Prisma ORM
 - PostgreSQL
@@ -23,36 +23,40 @@ Basic credential login with protected `/dashboard` route.
 
 ## Local Setup
 ```bash
-npm install
+npm ci
 cp .env.example .env
+# Set AUTH_SECRET and ADMIN_PASSWORD in .env; keep local PostgreSQL URLs.
 npm run prisma:generate
-npm run prisma:migrate -- --name init
+npm run prisma:deploy
 npm run prisma:seed
 npm run dev
 ```
 
 Open: `http://localhost:3000`
 
-## Default user
-- username: `admin`
-- password: `admin123`
+## Administrator and authentication
+
+There is no default password. Set `ADMIN_USERNAME` (defaults to `admin`) and a unique `ADMIN_PASSWORD` of at least 12 characters and no more than 72 bytes in your ignored `.env` before running `npm run prisma:seed`. Passwords are stored as bcrypt hashes. Set a random `AUTH_SECRET` of at least 32 bytes. The dashboard and all data APIs require a signed session.
 
 ## Environment
-See `.env.example`.
 
-## Deployment
-### Vercel
-1. Create PostgreSQL database.
-2. Add `DATABASE_URL` in Vercel environment variables.
-3. Deploy repository.
-4. Run migrations in CI or post-deploy pipeline.
+See `.env.example`. `DATABASE_URL` serves application queries; `DIRECT_URL` serves migration commands. For development both can point to the same local PostgreSQL database. Never commit credentials or define `NODE_ENV` in `.env`.
 
-### VPS
-1. Install Node 20+, PostgreSQL, PM2.
-2. Configure `.env`.
-3. Run `npm ci && npm run build`.
-4. Run migrations and seed.
-5. Start with `pm2 start npm --name consitec -- start`.
+## Deployment on Vercel
+
+Follow [the Vercel guide](docs/VERCEL.md) to create Neon PostgreSQL, configure secrets, initialize the database, and deploy. The repository configures Node 24, `npm ci`, Prisma generation, and the Next.js build. Database migrations and administrator provisioning run separately before opening the deployment.
+
+## Validation
+
+```bash
+npm run lint
+npm run build
+npm start
+# Another terminal, with credentials for an isolated test database:
+node --env-file=.env scripts/smoke.mjs
+```
+
+The smoke checks rejected credentials, protected pages/APIs, signed cookies, database reads/writes, dashboard totals, and logout. It creates and removes test records; use a test database.
 
 ## Business Notes
 - Monthly view automatically changes using selected month/year and preserves historical records by date.
