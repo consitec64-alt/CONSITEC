@@ -1,9 +1,17 @@
 import assert from 'node:assert/strict';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import { randomUUID } from 'node:crypto';
 import { SignJWT } from 'jose/jwt/sign';
 
 const base = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3000';
-const username = process.env.SMOKE_USERNAME || process.env.ADMIN_USERNAME || 'admin';
-const password = process.env.SMOKE_PASSWORD || process.env.ADMIN_PASSWORD;
+const database = new URL(process.env.DATABASE_URL);
+assert(['localhost','127.0.0.1'].includes(database.hostname) && database.pathname === '/consitec', 'Use the isolated local database');
+const prisma = new PrismaClient();
+const password = randomUUID();
+const fixture = await prisma.user.create({ data: { username: 'smoke-'+randomUUID(), password: await bcrypt.hash(password,12), role: 'ADMIN', salespersonId: (await prisma.salesperson.findFirstOrThrow()).id } });
+const username = fixture.username;
+try {
 if (!password) throw new Error('Set SMOKE_PASSWORD (or ADMIN_PASSWORD) for an isolated test database');
 const api = (path, options = {}) => fetch(new URL(path, base), { redirect: 'manual', ...options });
 const json = (body) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -42,14 +50,14 @@ const before = await (await api(`/api/dashboard?${period}`, { headers })).json()
 assert(Number.isFinite(before.totalServices));
 const created = [];
 try {
-  const serviceResponse = await api('/api/services', { ...json({ company: 'Vercel smoke test', courseId: courses[0].id, salespersonId: reps[0].id, instructorId: null, locationId: null, certificatesOnly: false, amount: 125.50, serviceDate: '2026-10-06T09:00:00.000Z', status: 'SCHEDULED' }), headers: { ...headers, 'Content-Type': 'application/json' } });
+  const serviceResponse = await api('/api/services', { ...json({ company: 'Vercel smoke test', correlativeCode: '0042', courseId: courses[0].id, salespersonId: reps[0].id, instructorId: null, locationId: null, certificatesOnly: false, amount: 125.50, serviceDate: '2026-10-06T09:00:00.000Z', status: 'SCHEDULED' }), headers: { ...headers, 'Content-Type': 'application/json' } });
   assert.equal(serviceResponse.status, 201);
   const service = await serviceResponse.json();
   created.push(`/api/services/${service.id}`);
   const after = await (await api(`/api/dashboard?${period}`, { headers })).json();
   assert.equal(after.totalServices, before.totalServices + 1);
   assert.equal(after.totalEstimatedBilling, before.totalEstimatedBilling + 125.50);
-  const saleResponse = await api('/api/certificate-sales', { ...json({ customerName: 'Vercel smoke test', customerType: 'NATURAL_PERSON', courseId: courses[0].id, salespersonId: reps[0].id, amount: 80, saleDate: '2026-10-06T09:00:00.000Z', status: 'PAID' }), headers: { ...headers, 'Content-Type': 'application/json' } });
+  const saleResponse = await api('/api/certificate-sales', { ...json({ customerName: 'Vercel smoke test', customerType: 'NATURAL_PERSON', courseId: courses[0].id, salespersonId: reps[0].id, amount: 80, saleDate: '2026-10-06T09:00:00.000Z', status: 'EXECUTED' }), headers: { ...headers, 'Content-Type': 'application/json' } });
   assert.equal(saleResponse.status, 201);
   const sale = await saleResponse.json();
   created.push(`/api/certificate-sales/${sale.id}`);
@@ -63,3 +71,5 @@ assert.equal(logout.status, 200);
 assert.match(logout.headers.get('set-cookie'), /consitec_session=;/);
 assert.equal((await api('/api/metadata/courses')).status, 401);
 console.log('Smoke passed: authentication, protected pages/APIs, middleware bypass, CSRF, cookies, PostgreSQL reads/writes, dashboard totals, and logout.');
+
+} finally { await prisma.user.deleteMany({where:{id:fixture.id}}); await prisma.$disconnect(); }

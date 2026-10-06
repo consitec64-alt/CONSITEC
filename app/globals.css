@@ -56,3 +56,85 @@
 .commercial-color-row input[type=color]{width:44px;height:38px;padding:3px;cursor:pointer}
 .commercial-color-row .btn{padding:10px 12px}
 @media(max-width:640px){.brand-compact .consitec-logo{width:80px}.users-page .page-heading p{max-width:190px}.commercial-color-row{gap:8px}}
+
+.billing-metrics{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}.goal .split{flex-wrap:wrap;gap:8px}.period-hint{white-space:normal}
+
+/* Collapsible navigation retains a usable icon rail, including on mobile. */
+.sidebar{transition:width .2s,transform .2s;overflow-y:auto;overflow-x:hidden;touch-action:pan-y}
+.main-content{transition:margin-left .2s;min-width:0}
+.sidebar-brand{flex-shrink:0}.sidebar-toggle{align-self:flex-end;margin-top:14px}
+.sidebar-drag{position:absolute;right:0;top:0;bottom:0;width:8px;cursor:ew-resize;touch-action:none}
+.sidebar-drag:hover,.sidebar-drag:focus-visible{background:var(--border)}
+.nav-item svg{flex-shrink:0}.sidebar-collapsed .sidebar{width:76px;padding:24px 10px}
+.sidebar-collapsed .main-content{margin-left:76px}
+.sidebar-collapsed .nav-label,.sidebar-collapsed .nav-caption,.sidebar-collapsed .sidebar-note,.sidebar-collapsed .sidebar-footer{display:none}
+.sidebar-collapsed .sidebar-brand .consitec-logo{width:48px}
+.sidebar-collapsed .nav-item{justify-content:center;padding:14px 10px}
+.sidebar-collapsed nav{margin-top:24px}.sidebar-collapsed .sidebar-toggle{align-self:center}
+.topbar-actions{display:flex;align-items:center;gap:10px}.theme-toggle{border:1px solid var(--border);background:var(--surface,#fff);padding:9px}
+.login-theme{display:flex;justify-content:flex-end;margin-bottom:12px}
+.service-dates{margin:0;border:1px solid var(--border);border-radius:10px;padding:16px;min-width:0}
+.service-dates legend{font-size:12px;font-weight:600}.service-dates>p{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:10px}
+.service-date-row{display:flex;align-items:flex-end;gap:10px;margin-bottom:12px}.service-date-row label{flex:1}
+.service-date-row>.icon-button{height:40px}.service-date-row>.icon-button:disabled{cursor:not-allowed}
+textarea{font:inherit;width:100%;min-width:0;resize:vertical;border:1px solid var(--border);border-radius:9px;padding:11px 12px;background:var(--surface,#fff);color:var(--ink)}
+textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-offset:3px}
+.instructor-card{min-width:0}.instructor-list{margin-top:18px}.instructor-details{border:1px solid var(--border);border-radius:10px;margin-top:12px}
+.instructor-details>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;cursor:pointer;list-style:none}
+.instructor-details>summary::-webkit-details-marker{display:none}.instructor-details>summary>span{display:flex;flex-direction:column;gap:8px;overflow-wrap:anywhere}
+.instructor-details[open]>summary>svg{transform:rotate(180deg)}.instructor-details>form{padding:16px;border-top:1px solid var(--border)}
+.instructor-actions{display:flex;justify-content:space-between;gap:16px;align-items:center}
+.car-details{border:1px solid var(--border);border-radius:9px;padding:12px}.car-details summary{cursor:pointer;font-size:12px;font-weight:600}.car-details .form-grid{margin-top:16px}
+.monthly-summary{grid-column:1/-1}.commercial-summary{margin-top:18px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.commercial-summary>summary{cursor:pointer;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;flex-wrap:wrap}
+.commercial-summary>summary>span{color:var(--muted);font-size:11px}.commercial-summary table{min-width:550px}.summary-empty{padding:18px}
+@media(max-width:760px){
+ .sidebar,.sidebar-collapsed .sidebar{width:60px;padding:20px 6px;transform:translateX(0)}
+ .main-content,.sidebar-collapsed .main-content{margin-left:60px}
+ .sidebar:not(.is-open) .nav-label,.sidebar:not(.is-open) .nav-caption,.sidebar:not(.is-open) .sidebar-note,.sidebar:not(.is-open) .sidebar-footer,.sidebar-toggle{display:none}
+ .sidebar:not(.is-open) .sidebar-brand .consitec-logo{width:42px}
+ .sidebar:not(.is-open) .nav-item{justify-content:center;padding:13px 8px}
+ .sidebar:not(.is-open) nav{margin-top:20px}
+ .sidebar.is-open{width:246px;padding:25px 18px}
+ .sidebar.is-open .nav-label{display:inline}.sidebar.is-open .nav-caption,.sidebar.is-open .sidebar-note,.sidebar.is-open .sidebar-footer{display:block}
+ .sidebar.is-open .sidebar-brand .consitec-logo{width:176px}.sidebar.is-open .nav-item{justify-content:flex-start;padding:14px 13px}
+ .topbar{padding:0 14px}.topbar-actions{gap:5px}.page-content{padding-left:15px;padding-right:15px}
+ .page-heading{align-items:flex-start;flex-wrap:wrap}.period-picker{max-width:100%;gap:2px}.period-picker select{max-width:100px}
+ .instructor-actions{flex-wrap:wrap}.instructor-details>form{padding:12px}.billing-metrics{grid-template-columns:minmax(0,1fr)}
+}
+
+/* Theme variables and surfaces cover the dashboard, forms, login and Users. */
+:root{--surface:#fff;--soft:#f0f4fb;--tooltip:#fff}
+:root[data-theme=dark]{color-scheme:dark;--blue:#8aafff;--navy:#0c172b;--orange:#ffb36f;--ink:#e6edf8;--muted:#a8b6cc;--border:#314058;--bg:#101827;--surface:#1b2638;--soft:#24324a;--tooltip:#1b2638}
+[data-theme=dark] .sidebar,[data-theme=dark] .topbar,[data-theme=dark] .panel,[data-theme=dark] .metric-card,[data-theme=dark] .period-picker,[data-theme=dark] .search-box,[data-theme=dark] .dialog,[data-theme=dark] .login-form-panel,[data-theme=dark] .refresh-button,[data-theme=dark] input,[data-theme=dark] select,[data-theme=dark] .toast{background:var(--surface);color:var(--ink);border-color:var(--border)}
+[data-theme=dark] .search-box input{background:transparent}
+[data-theme=dark] .nav-item,[data-theme=dark] .metric-card>.split>span,[data-theme=dark] .goal span,[data-theme=dark] .day-number,[data-theme=dark] .icon-button,[data-theme=dark] th{color:var(--muted)}
+[data-theme=dark] .nav-item:hover,[data-theme=dark] .nav-item.active,[data-theme=dark] .sidebar-note,[data-theme=dark] .avatar,[data-theme=dark] .btn.secondary,[data-theme=dark] .date-chip,[data-theme=dark] .weekdays,[data-theme=dark] .calendar-day.outside,[data-theme=dark] .icon-button:hover,[data-theme=dark] .user-role,[data-theme=dark] .login-lock{background:var(--soft);color:var(--blue)}
+[data-theme=dark] .btn:not(.secondary):not(.destructive){background:#315ec2;color:#fff}[data-theme=dark] .btn:not(.secondary):not(.destructive):hover{background:#3d70dc}
+[data-theme=dark] .service-item{background:#203357}[data-theme=dark] .service-item.certificate-item{background:#443326}
+[data-theme=dark] .service-item>span:not(.status){color:var(--muted)}
+[data-theme=dark] .blue{background:#26395e}[data-theme=dark] .orange{background:#443326;color:#ffb36f}[data-theme=dark] .purple{background:#3c2e50;color:#c7a2f9}[data-theme=dark] .green{background:#1f403e;color:#77d7bf}
+[data-theme=dark] .status-scheduled{background:#26395e;color:#a6c3ff}[data-theme=dark] .status-executed{background:#443326;color:#ffbf86}[data-theme=dark] .status-invoiced{background:#1f403e;color:#77d7bf}
+[data-theme=dark] td,[data-theme=dark] th,[data-theme=dark] .upcoming-item{border-color:var(--border)}
+[data-theme=dark] .count-badge{background:var(--soft);color:var(--ink)}[data-theme=dark] .count-badge.achieved,[data-theme=dark] .users-notice{background:#1f403e;color:#77d7bf;border-color:#34645c}
+[data-theme=dark] .error-banner,[data-theme=dark] .toast-error{background:#492c36;color:#ffb1bf;border-color:#734250}
+[data-theme=dark] .recharts-cartesian-axis-tick-value{fill:var(--muted)}[data-theme=dark] .recharts-cartesian-grid line{stroke:var(--border)}
+[data-theme=dark] .recharts-default-tooltip{background:var(--tooltip)!important;border-color:var(--border)!important;color:var(--ink)!important}
+[data-theme=dark] progress,[data-theme=dark] progress::-webkit-progress-bar{background:var(--soft)}
+
+.users-title{display:flex;align-items:center;gap:16px}
+[data-theme=dark] thead{background:var(--soft)}[data-theme=dark] td b{color:var(--ink)}
+.service-item>.split:first-child{align-items:flex-start;flex-wrap:wrap}
+.service-item>.split:first-child>strong{width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.service-item>span:not(.status){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.service-item .split>small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.service-item .split>b{white-space:nowrap}
+[data-theme=dark] th{background:var(--soft)}
+
+/* Class schedules and instructor course catalog */
+.class-session{padding:12px 0;border-bottom:1px solid var(--border);display:grid;gap:8px}.class-session-fields{display:grid;grid-template-columns:minmax(130px,1.3fr) minmax(95px,1fr) minmax(95px,1fr) auto;gap:12px;align-items:end}.class-session small{color:var(--muted)}.instructor-courses{border:1px solid var(--border);border-radius:10px;padding:14px;display:grid;gap:10px;max-height:250px;overflow:auto}.instructor-courses legend{font-weight:600;padding:0 5px}.assigned-commercial{display:grid;gap:5px;padding:12px;border:1px solid var(--border);border-radius:10px}.assigned-commercial span,.assigned-commercial small{color:var(--muted)}.user-email-form+.user-email-form{margin-top:16px}
+@media(max-width:540px){.class-session-fields{grid-template-columns:1fr 1fr}.class-session-fields>label:first-child{grid-column:1/-1}.class-session-fields>.icon-button{grid-column:2;justify-self:end}.users-form{grid-template-columns:1fr}}
+
+.service-item>small{display:block}.user-account .user-identity{grid-row:span 2}
+@media(max-width:760px){.user-account .user-identity{grid-row:auto}}
+
+.company-footer{gap:18px;align-items:baseline;flex-wrap:wrap;line-height:1.7}.company-footer a{color:var(--blue);overflow-wrap:anywhere}.company-footer address{font-style:normal;text-align:right;color:var(--muted)}.sctr-entry{border-top:1px solid var(--border);padding:18px 0}.sctr-entry .form-grid{margin-top:15px}@media(max-width:760px){.company-footer{flex-direction:column}.company-footer address{text-align:left}}

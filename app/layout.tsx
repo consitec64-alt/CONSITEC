@@ -9,7 +9,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: "try{document.documentElement.dataset.theme=localStorage.getItem('consitec-theme')==='dark'?'dark':'light'}catch{}" }} /></head>
       <body>{children}</body>
     </html>
   );
