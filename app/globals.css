@@ -128,3 +128,4 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 .service-item>.split:first-child>strong{width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .service-item>span:not(.status){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .service-item .split>small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.service-item .split>b{white-space:nowrap}
+[data-theme=dark] th{background:var(--soft)}
