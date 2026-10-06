@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
+import { normalizeEmail } from "@/lib/email";
 import { encodeSession, SESSION_COOKIE, SESSION_SECONDS } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -14,11 +15,12 @@ export async function POST(req: Request) {
   }
   const { username, password } = (body ?? {}) as { username?: unknown; password?: unknown };
   if (typeof username !== "string" || typeof password !== "string" ||
-      !username.trim() || username.length > 100 || !password || Buffer.byteLength(password) > 72) {
+      !username.trim() || username.length > 254 || !password || Buffer.byteLength(password) > 72) {
     return NextResponse.json({ error: "Credenciales inválidas" }, { status: 400 });
   }
   try {
-    const user = await prisma.user.findUnique({ where: { username: username.trim() } });
+    const identifier = normalizeEmail(username) ?? username.trim();
+    const user = await prisma.user.findUnique({ where: { username: identifier } });
     // Reject legacy plaintext passwords; provision a hashed password with prisma:seed.
     const isHash = user && /^\$2[aby]\$\d{2}\$/.test(user.password);
     const hash = isHash ? user.password : "$2b$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW";

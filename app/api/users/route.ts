@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import bcrypt from "bcrypt";
 import { currentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
+import { normalizeEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -34,23 +35,43 @@ export async function POST(req: Request) {
     if (denied) return denied;
     let body;
     try { body = await req.json(); } catch { return response({ error: "Solicitud inválida" }, 400); }
-    const { username, password, role } = body ?? {};
-    if (typeof username !== "string" || !/^[a-zA-Z0-9._-]{3,100}$/.test(username.trim())) {
-      return response({ error: "El usuario debe tener entre 3 y 100 caracteres: letras, números, punto, guion o guion bajo" }, 400);
-    }
+    const { email, password, role } = body ?? {};
+    const username = normalizeEmail(email);
+    if (!username) return response({ error: "Ingresa un correo electrónico válido" }, 400);
     if (typeof password !== "string" || password.length < 12 || Buffer.byteLength(password) > 72) {
       return response({ error: "La contraseña debe tener al menos 12 caracteres y como máximo 72 bytes" }, 400);
     }
     if (role !== "ADMIN" && role !== "SALES") return response({ error: "Selecciona un rol válido" }, 400);
     const hashed = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { username: username.trim(), password: hashed, role }, select: fields
+      data: { username, password: hashed, role }, select: fields
     });
     return response(user, 201);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return response({ error: "Ese nombre de usuario ya existe" }, 409);
+      return response({ error: "Ese correo electrónico ya está registrado" }, 409);
     }
     return response({ error: "No se pudo crear el usuario" }, 503);
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const denied = await authorize();
+    if (denied) return denied;
+    let body;
+    try { body = await req.json(); } catch { return response({ error: "Solicitud inválida" }, 400); }
+    const { id, email } = body ?? {};
+    const username = normalizeEmail(email);
+    if (typeof id !== "string" || !id || id.length > 100 || !username) {
+      return response({ error: "Selecciona una cuenta e ingresa un correo electrónico válido" }, 400);
+    }
+    return response(await prisma.user.update({ where: { id }, data: { username }, select: fields }));
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") return response({ error: "Ese correo electrónico ya está registrado" }, 409);
+      if (error.code === "P2025") return response({ error: "La cuenta ya no existe" }, 404);
+    }
+    return response({ error: "No se pudo actualizar el correo" }, 503);
   }
 }

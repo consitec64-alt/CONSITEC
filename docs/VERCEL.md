@@ -22,7 +22,7 @@ Importa `consitec64-alt/CONSITEC` desde GitHub, selecciona la rama que contiene 
 | Framework | Next.js |
 | Node.js | 24.x |
 | Install command | `npm ci` |
-| Build command | `npm run build` |
+| Build command | `npm run prisma:deploy && npm run build` |
 | Output directory | Predeterminado de Next.js |
 
 Añade en **Settings → Environment Variables**:
@@ -37,7 +37,7 @@ Genera `AUTH_SECRET` con `openssl rand -hex 32` y guárdalo como secreto. No def
 
 ## 3. Inicializar la base antes de abrir el sitio
 
-Las migraciones no se ejecutan automáticamente durante cada build: una Preview no debe modificar la base de producción. Desde un checkout local de **esta misma rama**, usa un archivo `.env` ignorado con `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `ADMIN_USERNAME` y `ADMIN_PASSWORD`. No reutilices la base de desarrollo si estás inicializando producción.
+El build de Vercel aplica las migraciones pendientes antes de compilar, usando la base del entorno correspondiente. Preview y Production deben tener conexiones a bases distintas. La nueva migración agrega el color de los comerciales, conservando los registros existentes. El build no ejecuta el seed ni cambia contraseñas. Para la inicialización del administrador, desde un checkout de **esta misma rama**, usa un archivo `.env` ignorado con `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `ADMIN_USERNAME` y `ADMIN_PASSWORD`. No reutilices la base de desarrollo si estás inicializando producción. Ejecuta estos comandos desde un entorno con acceso directo a PostgreSQL; si el equipo local no tiene conectividad, usa un proceso de inicialización autorizado en Vercel.
 
 `ADMIN_PASSWORD` debe tener al menos 12 caracteres y como máximo 72 bytes. Elige una contraseña exclusiva; ya no existe una contraseña predeterminada. Ejecuta:
 
@@ -71,7 +71,7 @@ node --env-file=.env scripts/smoke.mjs
 
 El smoke crea y elimina un servicio y una venta; no lo ejecutes sobre datos reales. Para un Preview aislado configura `SMOKE_BASE_URL`, `SMOKE_USERNAME` y `SMOKE_PASSWORD` de forma segura. Si el Preview tiene protección de acceso de Vercel, esa protección debe permitir el runner antes de probar la aplicación.
 
-Los roles ADMIN y SALES se almacenan y firman en la sesión; el panel mantiene las mismas operaciones para ambos roles. No hay administración de usuarios ni restricciones distintas por rol. Para revocar todas las sesiones, rota `AUTH_SECRET` y vuelve a desplegar. Configura protección de intentos de login mediante las reglas de firewall/rate limiting disponibles en tu plan de Vercel antes de publicar el panel para uso real.
+Ambos roles tienen acceso a las operaciones comerciales. Solo ADMIN puede administrar usuarios. El middleware usa Node.js y consulta la existencia de la cuenta en PostgreSQL antes de permitir el acceso a páginas y APIs protegidas; eliminar la cuenta revoca sus sesiones inmediatamente. Para revocar todas las sesiones, rota `AUTH_SECRET` y vuelve a desplegar.
 
 ## Problemas frecuentes
 
