@@ -52,16 +52,20 @@ restaura los colores al terminar; rechaza bases remotas.
 
 ## Facturación y clientes del mes
 
-**Vista general** muestra la facturación estimada (todos los importes de la
-agenda) y, a su lado, **Total facturado** (solo servicios cuyo estado actual es
-Facturado). Programado, Ejecutado y Pagado no se incluyen en este segundo total.
-En **Rendimiento comercial**, la columna **Total facturado** usa esa misma regla
-para cada comercial, incluyendo los que tienen cero.
+**Vista general** muestra la facturación estimada de la agenda y, a su lado,
+**Total facturado**. Este segundo total suma únicamente registros en estado
+Facturado: servicios que no sean «Solo certificados», más ventas de certificados
+con tipo Empresa. No incluye certificados de personas naturales ni estados
+Programado, Ejecutado o Pagado. En **Rendimiento comercial**, la columna
+**Total facturado** aplica la misma regla por comercial, incluyendo los de cero.
 
-La **Meta de facturación** es S/200,000 y usa la facturación estimada del mes.
-Se alcanza desde S/200,000 inclusive y se actualiza al editar, eliminar o cambiar
-el mes de los servicios. Las ventas de certificados no se suman por segunda vez
-al importe de la agenda: algunas ya aparecen allí como servicios.
+La **Meta de facturación** es mensual, S/200,000, y usa ese Total facturado.
+Se alcanza desde S/200,000 inclusive. Los servicios «Solo certificados» son
+registros de agenda y no aportan a este total: su facturación debe registrarse en
+Venta de certificados, donde se identifica si el cliente es empresa o persona
+natural. Esta regla evita duplicar las ventas que también figuran en la agenda.
+Si solo se registra un certificado en la agenda, debe registrarse su venta para
+que aporte al total facturado. La facturación estimada existente no cambia.
 
 El contador **clientes únicos**, junto a servicios y ventas de certificados,
 une los nombres de clientes de ambos apartados dentro del mes seleccionado.

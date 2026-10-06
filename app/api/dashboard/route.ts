@@ -23,14 +23,19 @@ export async function GET(req: Request) {
 
     const certificateSales = await prisma.certificateSale.findMany({
       where: { saleDate: { gte: start, lt: end } },
-      select: { customerName: true }
+      include: { salesperson: true }
     });
     const customerKey = (name: string) => name.trim().replace(/\s+/g, " ").toLocaleLowerCase("es-PE");
     const totalUniqueCustomers = new Set([
       ...services.map(s => customerKey(s.company)),
       ...certificateSales.map(s => customerKey(s.customerName))
     ].filter(Boolean)).size;
-    const invoiced = services.filter(s => s.status === "INVOICED");
+    // Certificate-only agenda entries are scheduling copies; certificate revenue
+    // is counted from company certificate sales, never from those copies.
+    const invoiced = [
+      ...services.filter(s => !s.certificatesOnly && s.status === "INVOICED"),
+      ...certificateSales.filter(s => s.customerType === "COMPANY" && s.status === "INVOICED")
+    ];
     const totalInvoicedBilling = invoiced.reduce((sum, s) => sum.plus(s.amount), new Prisma.Decimal(0)).toNumber();
     const invoicedBySalesperson: Record<string, number> = {};
     for (const s of invoiced) {
@@ -100,7 +105,7 @@ export async function GET(req: Request) {
       invoicedBySalesperson,
       totalUniqueCustomers,
       billingGoal: 200000,
-      billingGoalAchieved: totalEstimatedBilling >= 200000,
+      billingGoalAchieved: totalInvoicedBilling >= 200000,
       topSalesRep,
       bestSellingCourse,
       mostAssignedInstructor,
