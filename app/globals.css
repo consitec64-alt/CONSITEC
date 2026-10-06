@@ -32,3 +32,27 @@
   .user-email-form{grid-template-columns:minmax(0,1fr)}
   .user-email-form .btn{width:100%}
 }
+
+.official-brand{justify-content:center;padding:0}
+.consitec-logo{display:block;width:176px;height:auto;max-width:100%;object-fit:contain}
+.brand-on-dark{align-self:flex-start;background:#fff;padding:12px 18px!important;border-radius:12px}
+.brand-on-dark .consitec-logo{width:140px}
+.brand-compact .consitec-logo{width:100px}
+.user-delete-button{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;padding:6px 0;color:#bc3d47;font-size:11px}
+.user-delete-button:disabled{cursor:not-allowed;color:var(--muted);opacity:.65}
+.users-delete-dialog{border:0;margin:auto}
+.users-delete-dialog::backdrop{background:#14244266}
+.users-delete-dialog p{line-height:1.7;overflow-wrap:anywhere}
+.users-delete-dialog .error-banner{margin-top:16px}
+.record-actions{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.table-scroll{position:relative}
+.ranking-item progress::-webkit-progress-value{background:var(--bar-color,var(--blue))}
+.ranking-item progress::-moz-progress-bar{background:var(--bar-color,var(--blue))}
+.commercial-colors{border-top:1px solid var(--border);padding-top:20px;margin-top:24px}
+.commercial-colors h3{font-size:13px;margin:0 0 8px}
+.commercial-colors>p{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:16px}
+.commercial-color-row{display:grid;grid-template-columns:minmax(0,1fr) 44px auto;align-items:center;gap:12px;margin-top:12px}
+.commercial-color-row label{font-size:12px;font-weight:600;overflow-wrap:anywhere}
+.commercial-color-row input[type=color]{width:44px;height:38px;padding:3px;cursor:pointer}
+.commercial-color-row .btn{padding:10px 12px}
+@media(max-width:640px){.brand-compact .consitec-logo{width:80px}.users-page .page-heading p{max-width:190px}.commercial-color-row{gap:8px}}

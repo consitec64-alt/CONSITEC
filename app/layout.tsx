@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "CONSITEC | Gestión comercial",
-  description: "Panel de gestión comercial y operativa de Consitec"
+  description: "Panel de gestión comercial y operativa de Consitec",
+  icons: { icon: "/consitec-logo.png", apple: "/consitec-logo.png" }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

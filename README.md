@@ -44,7 +44,7 @@ See `.env.example`. `DATABASE_URL` serves application queries; `DIRECT_URL` serv
 
 ## Deployment on Vercel
 
-Follow [the Vercel guide](docs/VERCEL.md) to create Neon PostgreSQL, configure secrets, initialize the database, and deploy. The repository configures Node 24, `npm ci`, Prisma generation, and the Next.js build. Database migrations and administrator provisioning run separately before opening the deployment.
+Follow [the Vercel guide](docs/VERCEL.md) to configure PostgreSQL, secrets, initialize the administrator, and deploy. The repository configures Node 24, `npm ci`, Prisma generation, and migration deployment before the Next.js build. Use separate Preview and Production databases. Administrator provisioning is a separate initial step; builds do not run the seed.
 
 ## Validation
 

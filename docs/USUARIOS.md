@@ -25,12 +25,18 @@ a ejecutar el seed de administrador después de cambiar su nombre de acceso: el
 seed busca ADMIN_USERNAME (por defecto admin) y podría crear otra cuenta admin.
 El build normal de Vercel no ejecuta ese seed.
 
-Solo los administradores pueden listar, crear cuentas y cambiar correos. El
+Solo los administradores pueden listar, crear cuentas, cambiar correos y eliminar usuarios. El
 permiso se comprueba contra la base de datos en cada operación. Ambos roles
 conservan acceso a las funciones comerciales existentes. Crear una cuenta no
 agrega un registro al catálogo de comerciales; ese catálogo se administra en
-Base de soporte. Esta versión no incluye eliminación ni recuperación de
-contraseñas.
+Base de soporte. Esta versión no incluye recuperación de contraseñas.
+
+## Eliminar usuarios
+
+Presiona **Eliminar cuenta** junto al usuario y confirma en el diálogo. La cuenta
+pierde el acceso inmediatamente, incluidas sus sesiones abiertas; sus ventas y
+servicios se conservan. No puedes eliminar tu propia cuenta y debe quedar al
+menos un administrador. La confirmación se puede cancelar antes de eliminar.
 
 ## Verificación local
 
