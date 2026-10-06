@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -20,11 +21,27 @@ export async function GET(req: Request) {
       include: { salesperson: true, course: true, instructor: true }
     });
 
+    const certificateSales = await prisma.certificateSale.findMany({
+      where: { saleDate: { gte: start, lt: end } },
+      select: { customerName: true }
+    });
+    const customerKey = (name: string) => name.trim().replace(/\s+/g, " ").toLocaleLowerCase("es-PE");
+    const totalUniqueCustomers = new Set([
+      ...services.map(s => customerKey(s.company)),
+      ...certificateSales.map(s => customerKey(s.customerName))
+    ].filter(Boolean)).size;
+    const invoiced = services.filter(s => s.status === "INVOICED");
+    const totalInvoicedBilling = invoiced.reduce((sum, s) => sum.plus(s.amount), new Prisma.Decimal(0)).toNumber();
+    const invoicedBySalesperson: Record<string, number> = {};
+    for (const s of invoiced) {
+      const name = s.salesperson.name;
+      invoicedBySalesperson[name] = new Prisma.Decimal(invoicedBySalesperson[name] ?? 0).plus(s.amount).toNumber();
+    }
     const totalServices = services.length;
     const totalEstimatedBilling = services.reduce(
-      (acc, s) => acc + Number(s.amount),
-      0
-    );
+      (acc, s) => acc.plus(s.amount),
+      new Prisma.Decimal(0)
+    ).toNumber();
 
     const bySalesperson: Record<string, number> = {};
     const byWeek: Record<string, number> = {
@@ -79,6 +96,11 @@ export async function GET(req: Request) {
     return NextResponse.json({
       totalServices,
       totalEstimatedBilling,
+      totalInvoicedBilling,
+      invoicedBySalesperson,
+      totalUniqueCustomers,
+      billingGoal: 200000,
+      billingGoalAchieved: totalEstimatedBilling >= 200000,
       topSalesRep,
       bestSellingCourse,
       mostAssignedInstructor,

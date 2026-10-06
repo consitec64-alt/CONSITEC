@@ -56,3 +56,5 @@
 .commercial-color-row input[type=color]{width:44px;height:38px;padding:3px;cursor:pointer}
 .commercial-color-row .btn{padding:10px 12px}
 @media(max-width:640px){.brand-compact .consitec-logo{width:80px}.users-page .page-heading p{max-width:190px}.commercial-color-row{gap:8px}}
+
+.billing-metrics{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}.goal .split{flex-wrap:wrap;gap:8px}.period-hint{white-space:normal}

@@ -49,3 +49,31 @@ El smoke comprueba edición, validación, totales, colores compartidos, eliminac
 de cuentas, protección de la propia cuenta, revocación inmediata de sesiones,
 CSRF y conservación de registros comerciales. Elimina sus datos temporales y
 restaura los colores al terminar; rechaza bases remotas.
+
+## Facturación y clientes del mes
+
+**Vista general** muestra la facturación estimada (todos los importes de la
+agenda) y, a su lado, **Total facturado** (solo servicios cuyo estado actual es
+Facturado). Programado, Ejecutado y Pagado no se incluyen en este segundo total.
+En **Rendimiento comercial**, la columna **Total facturado** usa esa misma regla
+para cada comercial, incluyendo los que tienen cero.
+
+La **Meta de facturación** es S/200,000 y usa la facturación estimada del mes.
+Se alcanza desde S/200,000 inclusive y se actualiza al editar, eliminar o cambiar
+el mes de los servicios. Las ventas de certificados no se suman por segunda vez
+al importe de la agenda: algunas ya aparecen allí como servicios.
+
+El contador **clientes únicos**, junto a servicios y ventas de certificados,
+une los nombres de clientes de ambos apartados dentro del mes seleccionado.
+Repetir un cliente en diferentes fechas cuenta una sola vez. Se ignoran
+mayúsculas, espacios iniciales/finales y espacios repetidos. El sistema usa
+nombres, no RUC/DNI: personas diferentes con el mismo nombre contarán como una;
+variantes de razón social o errores ortográficos pueden contar como diferentes.
+Los filtros de búsqueda y estado no cambian estos indicadores mensuales.
+
+Para comprobar límites del mes, céntimos, estados, totales por comercial, meta
+y clientes repetidos con datos temporales que se eliminan al terminar:
+
+```sh
+SMOKE_BASE_URL=http://127.0.0.1:3000 node --env-file=.env scripts/billing-smoke.mjs
+```
