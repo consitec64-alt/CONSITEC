@@ -1,9 +1,11 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = params.id;
+    const id = (await params).id;
     await prisma.instructor.delete({ where: { id } });
     return NextResponse.json({ message: "Instructor eliminado" });
   } catch (error) {
