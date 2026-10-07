@@ -44,6 +44,9 @@ export function serviceInput(body: Record<string, unknown>) {
   if (typeof body.correlativeCode !== "string" || !/^[0-9]{4}$/.test(body.correlativeCode)) throw new InvalidRecord("El código de correlativo debe tener exactamente 4 dígitos numéricos");
   const travelMode = body.travelMode ?? "NONE";
   if (!Object.values(TravelMode).includes(travelMode as TravelMode)) throw new InvalidRecord("Viáticos inválidos");
+  const rawCourses = body.courseIds === undefined ? [body.courseId] : body.courseIds;
+  if (!Array.isArray(rawCourses) || !rawCourses.length || rawCourses.length > 100) throw new InvalidRecord("Selecciona entre 1 y 100 cursos del catálogo");
+  const courseIds = [...new Set(rawCourses.map(id => text(id, "Curso", 100)))];
   const rawSessions = body.sessions;
   if (rawSessions !== undefined && (!Array.isArray(rawSessions) || !rawSessions.length || rawSessions.length > 366)) throw new InvalidRecord("Agrega entre 1 y 366 fechas al servicio");
   const dates = serviceDates(rawSessions ? (rawSessions as Record<string, unknown>[]).map(session => session?.date) : body.serviceDates ?? [body.serviceDate]);
@@ -57,7 +60,7 @@ export function serviceInput(body: Record<string, unknown>) {
   });
   const modality = body.modality || null;
   if (modality !== null && !Object.values(ClassModality).includes(modality as ClassModality)) throw new InvalidRecord("Modalidad inválida");
-  return { ...common(body), company: text(body.company, "Cliente"), correlativeCode: body.correlativeCode,
+  return { ...common({ ...body, courseId: courseIds[0] }), courseIds, company: text(body.company, "Cliente"), correlativeCode: body.correlativeCode,
     requestedInvoiceDate: invoiceDate(body.invoiceDate), travelMode: travelMode as TravelMode, serviceDate: dates[0], dates, sessions, modality: modality as ClassModality | null, certificatesOnly: body.certificatesOnly,
     instructorId: body.instructorId == null || body.instructorId === "" ? null : text(body.instructorId, "Instructor", 100),
     locationId: body.locationId == null || body.locationId === "" ? null : text(body.locationId, "Ubicación", 100) };

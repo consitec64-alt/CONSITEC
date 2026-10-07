@@ -222,3 +222,50 @@ pero el instructor deja de aparecer en este apartado. La migración
 `20261006230000_sctr_validity` deja vacías las fechas históricas sin inventarlas.
 
 El pie del panel y de Usuarios muestra la web y la dirección fiscal de CONSITEC.
+
+## Registro de instructores y servicios con varios cursos
+
+El nuevo apartado **Registro de instructores** se alimenta de la agenda: cada
+fecha de una clase produce una fila con Mes, Fecha, Instructor, Empresa,
+Curso(s), Modalidad, Lugar, Horas de clase y Confirmación. Las horas descuentan
+el descanso por jornada; los datos históricos sin horarios aparecen como
+**Sin horario**. Los servicios «Solo certificados» no son clases y quedan fuera.
+La ubicación usa departamento/distrito de la agenda; las clases virtuales sin
+ubicación muestran Virtual. Los datos sin instructor se indican como Sin asignar.
+
+Selecciona el mes arriba y filtra por instructor, empresa, curso, modalidad y
+rango de fechas. Los filtros se aplican dentro del mes seleccionado. Una clase
+con varios cursos coincide al filtrar por cualquiera de ellos. Cambiar el mes
+reinicia los filtros y las confirmaciones. Editar o eliminar una clase actualiza
+su registro; no se mantiene una tabla duplicada ni una carga manual adicional.
+
+En el formulario de servicio, **Cursos del servicio** permite marcar uno o
+varios cursos existentes del catálogo. Al editar se conservan las selecciones.
+Cada fecha sigue contando como una jornada y el importe se factura una sola vez,
+independientemente del número de cursos. La estadística por curso considera
+todos los cursos impartidos en cada jornada.
+
+**Confirmación** comienza vacía y se puede marcar o desmarcar. Es solo temporal
+en esta pantalla: no se guarda en la base de datos y se pierde al salir del
+apartado, cambiar de mes o recargar la página. No altera el estado del servicio.
+
+**Exportar a Excel** descarga un archivo `.xlsx` con las filas filtradas y las
+confirmaciones actuales. Incluye horas como valores numéricos, representa la confirmación con
+valores VERDADERO/FALSO de Excel, mantiene vacías las horas desconocidas y admite filtros
+sobre sus columnas. Las confirmaciones de ese archivo son una copia del momento
+de descarga; no actualizan la aplicación.
+
+La migración `20261007100000_service_courses` vincula cada servicio existente
+con su curso anterior, preservando importes, fechas y estados. No requiere
+modificar las variables de entorno. Las ventas de certificados conservan su
+selector de un curso.
+
+Pruebas locales adicionales, con PostgreSQL y la aplicación iniciados:
+
+```sh
+SMOKE_BASE_URL=http://127.0.0.1:3000 node --env-file=.env scripts/instructor-register-smoke.mjs
+npx tsx scripts/check-register-excel.ts /tmp/registro-prueba.xlsx
+```
+
+El primer script crea y limpia fixtures solo en localhost/consitec. El segundo
+genera un archivo aislado para comprobar su lectura con una herramienta Excel.

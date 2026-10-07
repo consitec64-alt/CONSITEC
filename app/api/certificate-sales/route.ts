@@ -54,8 +54,8 @@ export async function POST(req: Request) {
       const salespersonId = await assignedSalesperson(tx, actor?.id);
       const sale = await tx.certificateSale.create({ data: { ...data, salespersonId, invoicedAt: invoiceDateFor(data.status, requestedInvoiceDate) } });
       if (scheduled) {
-        const { dates: _dates, sessions, requestedInvoiceDate: _invoice, ...service } = scheduled;
-        await tx.service.create({ data: { ...service, salespersonId, dates: { create: sessions } } });
+        const { dates: _dates, sessions, courseIds, requestedInvoiceDate: _invoice, ...service } = scheduled;
+        await tx.service.create({ data: { ...service, salespersonId, courses: { connect: courseIds.map(id => ({ id })) }, dates: { create: sessions } } });
       }
       return sale;
     });
