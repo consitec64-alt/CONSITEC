@@ -138,3 +138,9 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 @media(max-width:760px){.user-account .user-identity{grid-row:auto}}
 
 .company-footer{gap:18px;align-items:baseline;flex-wrap:wrap;line-height:1.7}.company-footer a{color:var(--blue);overflow-wrap:anywhere}.company-footer address{font-style:normal;text-align:right;color:var(--muted)}.sctr-entry{border-top:1px solid var(--border);padding:18px 0}.sctr-entry .form-grid{margin-top:15px}@media(max-width:760px){.company-footer{flex-direction:column}.company-footer address{text-align:left}}
+
+.register-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:20px}.register-filters label{display:grid;gap:7px;font-size:11px;font-weight:600}.register-filter-actions{grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap}.register-totals{gap:12px;flex-wrap:wrap;margin:18px 0;color:var(--muted);font-size:12px}.register-confirmation{width:18px;height:18px;accent-color:var(--blue)}.instructor-register>.section-heading{gap:16px;flex-wrap:wrap}.instructor-register .table-scroll{max-height:650px}.instructor-register th{position:sticky;top:0;z-index:1}.instructor-register td:nth-child(4),.instructor-register td:nth-child(5){white-space:normal;min-width:160px;max-width:280px;overflow-wrap:anywhere}@media(max-width:760px){.register-filters{grid-template-columns:1fr}.instructor-register>.section-heading .btn{width:100%}}
+
+.sidebar-bottom{margin-top:auto;flex-shrink:0;padding-top:12px}.sidebar-bottom .logout-button{width:100%;margin-top:14px}
+
+.sidebar{overflow:hidden}.sidebar-content{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column}.sidebar-content>nav,.sidebar-content>.sidebar-brand,.sidebar-content>.sidebar-note{flex-shrink:0}

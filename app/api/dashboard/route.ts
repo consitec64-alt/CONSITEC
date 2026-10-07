@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 
     const services = await prisma.service.findMany({
       where: agendaWhere(start, end),
-      include: { salesperson: true, course: true, instructor: true, location: true, dates: { orderBy: { date: "asc" } } }
+      include: { salesperson: true, course: true, courses: true, instructor: true, location: true, dates: { orderBy: { date: "asc" } } }
     });
 
     const certificateSales = await prisma.certificateSale.findMany({
@@ -37,7 +37,7 @@ export async function GET(req: Request) {
     // Certificate-only agenda entries are scheduling copies; certificate revenue
     // is counted from company certificate sales, never from those copies.
     const [invoicedServices, invoicedCertificates] = await Promise.all([
-      prisma.service.findMany({ where: { status: "INVOICED", certificatesOnly: false, invoicedAt: { gte: start, lt: end } }, include: { salesperson: true, course: true, instructor: true, location: true, dates: true } }),
+      prisma.service.findMany({ where: { status: "INVOICED", certificatesOnly: false, invoicedAt: { gte: start, lt: end } }, include: { salesperson: true, course: true, courses: true, instructor: true, location: true, dates: true } }),
       prisma.certificateSale.findMany({ where: { status: "INVOICED", customerType: "COMPANY", invoicedAt: { gte: start, lt: end } }, include: { salesperson: true } })
     ]);
     const invoiced = [...invoicedServices, ...invoicedCertificates];
@@ -76,9 +76,8 @@ export async function GET(req: Request) {
       bySalesperson[rep] = (bySalesperson[rep] ?? 0) + 1;
       byWeek[weekLabel] = (byWeek[weekLabel] ?? 0) + 1;
 
-      if (s.course?.name) {
-        byCourse[s.course.name] =
-          (byCourse[s.course.name] ?? 0) + 1;
+      for (const course of s.courses.length ? s.courses : [s.course]) {
+        byCourse[course.name] = (byCourse[course.name] ?? 0) + 1;
       }
 
       if (s.instructor?.name) {
