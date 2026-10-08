@@ -145,6 +145,18 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 
 .sidebar{overflow:hidden}.sidebar-content{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column}.sidebar-content>nav,.sidebar-content>.sidebar-brand,.sidebar-content>.sidebar-note{flex-shrink:0}
 
+/* Account-specific first-login guide. Native dialog provides keyboard focus containment. */
+.tutorial-progress{font-size:11px;font-weight:700;color:#5580bd;letter-spacing:.08em}
+.tutorial-actions,.tutorial-actions>div{display:flex;align-items:center;gap:8px}.tutorial-actions{justify-content:space-between}
+
+.tour-stage{position:fixed;inset:0;margin:0;width:100vw;max-width:none;height:100dvh;max-height:none;padding:0;border:0;background:transparent;color:var(--ink);overflow:hidden}
+.tour-stage::backdrop{background:transparent}
+.tour-spotlight{position:fixed;border:3px solid #d58a18;border-radius:10px;box-shadow:0 0 0 9999px rgb(8 18 36 / 48%);pointer-events:none}
+.tour-shade{position:fixed;inset:0;background:rgb(8 18 36 / 48%)}
+.tour-card{position:fixed;width:min(480px,calc(100vw - 24px));max-height:45dvh;overflow:auto;border:1px solid var(--border);border-radius:16px;padding:20px;background:var(--surface);color:var(--ink);box-shadow:0 12px 48px #0004}
+.tour-card h2{margin:10px 0;font-size:21px}.tour-card p{font-size:14px;line-height:1.6;margin:0 0 16px}.tour-empty{display:block;margin-bottom:12px;color:var(--muted)}
+@media(max-width:760px){.tour-card{padding:16px}.tour-card h2{font-size:18px}.tour-card p{font-size:13px}.tour-card .btn{padding:10px 12px}}
+
 .instructor-list,.sctr-list{max-height:360px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-right:8px}
 .instructor-documents-link{display:inline-flex;align-items:center;gap:7px;color:var(--blue);font-size:11px;line-height:1.5;text-decoration:underline;text-underline-offset:3px;white-space:normal;overflow-wrap:anywhere}
 .instructor-documents-link svg{flex-shrink:0}.sctr-card>.instructor-documents-link{margin-bottom:18px}

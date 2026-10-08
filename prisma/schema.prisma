@@ -25,6 +25,8 @@ enum CustomerType {
 }
 
 model User {
+  tutorialStep Int @default(0)
+  tutorialCompleted Boolean @default(false)
   id       String @id @default(cuid())
   username String @unique
   password String
