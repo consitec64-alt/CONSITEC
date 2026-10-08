@@ -144,3 +144,8 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 .sidebar-bottom{margin-top:auto;flex-shrink:0;padding-top:12px}.sidebar-bottom .logout-button{width:100%;margin-top:14px}
 
 .sidebar{overflow:hidden}.sidebar-content{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column}.sidebar-content>nav,.sidebar-content>.sidebar-brand,.sidebar-content>.sidebar-note{flex-shrink:0}
+
+.instructor-list,.sctr-list{max-height:360px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-right:8px}
+.instructor-documents-link{display:inline-flex;align-items:center;gap:7px;color:var(--blue);font-size:11px;line-height:1.5;text-decoration:underline;text-underline-offset:3px;white-space:normal;overflow-wrap:anywhere}
+.instructor-documents-link svg{flex-shrink:0}.sctr-card>.instructor-documents-link{margin-bottom:18px}
+@media(max-width:760px){.instructor-list,.sctr-list{max-height:320px}}
