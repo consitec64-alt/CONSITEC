@@ -314,3 +314,6 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 .workspace-banner .overview-actions .btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 .users-page .workspace-banner { margin: 22px 0; }
 @media(max-width:760px) { .workspace-banner .overview-actions { flex-direction: column; align-items: stretch; }.workspace-banner .overview-actions .btn { flex: none; min-height: 40px; }.workspace-banner h2 { font-size: 23px; }.workspace-banner::before { right: -170px; } }
+
+.company-footer .app-version{flex-basis:100%;text-align:right;font-size:11px;color:var(--muted)}
+@media(max-width:760px){.company-footer .app-version{align-self:flex-end}}
