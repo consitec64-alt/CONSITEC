@@ -3,7 +3,8 @@
 import { useTutorial } from "@/components/dashboard-tutorial";
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Trash2 } from "lucide-react";
+import WorkspaceBanner from "@/components/workspace-banner";
+import { Trash2, UserPlus, Users } from "lucide-react";
 import CompanyFooter from "@/components/company-footer";
 import ThemeToggle from "@/components/theme-toggle";
 import Brand from "@/components/brand";
@@ -82,6 +83,7 @@ export default function UsersPanel() {
   return <main className="page-content users-page">
     <Link href="/dashboard" className="text-button">← Volver al panel</Link>
     <div className="page-heading"><div><div className="users-title"><h1>Usuarios</h1><button className="btn secondary" onClick={startTutorial}>Ver tutorial</button><ThemeToggle /></div><p>Crea cuentas y asigna el comercial de cada usuario.</p></div><Brand href="/dashboard" className="brand-compact" /></div>
+    <WorkspaceBanner variant="users" kicker="CADA PERSONA, SU ACCESO Y SU COMERCIAL." title="Un equipo conectado empieza aquí" description="Crea accesos, asigna comerciales y mantén las cuentas organizadas. Solo los administradores pueden gestionar usuarios." icon={Users} actions={<><button type="button" className="btn" onClick={()=>{const input=document.querySelector<HTMLInputElement>('.users-form [name=email]');input?.scrollIntoView({behavior:'smooth',block:'center'});input?.focus({preventScroll:true});}}><UserPlus size={16}/>Crear un acceso</button><button type="button" className="btn secondary" onClick={()=>document.getElementById('existing-accounts')?.scrollIntoView({behavior:'smooth',block:'start'})}><Users size={16}/>Cuentas existentes</button></>}/>
     {error && <p className="error-banner" role="alert">{error}</p>}
     {notice && <p className="users-notice" role="status">{notice}</p>}
     <section className="panel"><div className="section-heading"><h2>Crear usuario</h2></div>
@@ -94,7 +96,7 @@ export default function UsersPanel() {
         <button className="btn" disabled={busy}>{busy ? "Creando…" : "Crear usuario"}</button></div>
       </form>
     </section>
-    <section className="panel"><div className="section-heading"><h2>Cuentas existentes</h2><button className="text-button" disabled={loading} onClick={() => { setError(""); void load().catch(err => setError(err.message)); }}>Actualizar</button></div>
+    <section className="panel" id="existing-accounts"><div className="section-heading"><h2>Cuentas existentes</h2><button className="text-button" disabled={loading} onClick={() => { setError(""); void load().catch(err => setError(err.message)); }}>Actualizar</button></div>
       <p className="form-note">Asigna un correo a las cuentas existentes. Su contraseña se conserva; después del cambio deben ingresar con el correo nuevo. Verifica la dirección antes de guardar.</p>
       {loading ? <p role="status">Cargando usuarios…</p> : <ul className="user-account-list">{users.map(user => <li key={user.id} className="user-account">
         <div className="user-identity"><strong>{user.username}</strong><span className="user-role">{user.role === "ADMIN" ? "Administrador" : "Vendedor"}</span>

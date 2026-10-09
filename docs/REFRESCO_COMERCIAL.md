@@ -27,3 +27,9 @@ No requiere variables de entorno ni dependencias nuevas. Vercel ejecuta `npm run
 El tutorial mantiene la distinción entre administradores y vendedores, incorpora los accesos rápidos y las nuevas opciones, y explica búsqueda y eliminación genéricas una sola vez.
 
 Validación local: `SMOKE_BASE_URL=http://127.0.0.1:3065 node --env-file=.env scripts/certificates-instructors-smoke.mjs`. Utiliza únicamente la base local y limpia sus fixtures.
+
+## Cabeceras para todas las herramientas
+
+Vista general, agenda, cotizaciones, certificados, rendimiento, instructores, soporte, historial, papelera y usuarios comparten una cabecera de marca. Cada una tiene mensaje, icono, acento de color y accesos que abren formularios, llevan a otras vistas o enfocan los controles correspondientes. Los accesos de semanas distinguen administradores y vendedores; Usuarios permanece exclusivo de administración. Las cabeceras se adaptan a móvil y modo oscuro.
+
+Los períodos de cabecera corresponden al mes seleccionado cuando aplica. Cotizaciones indica que reúne todos los meses; soporte identifica sus catálogos compartidos. El tutorial muestra los accesos de cada herramienta sin repetir las instrucciones genéricas de búsqueda o eliminación.
