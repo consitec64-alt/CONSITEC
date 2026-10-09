@@ -81,3 +81,9 @@ intervención técnica autorizada para actualizar el hash, sin ejecutar seed.
 La mejora recomendada es añadir Restablecer contraseña para administradores
 en Usuarios. Para un flujo Olvidé mi contraseña por correo hacen falta un
 proveedor de correo y enlaces con tokens de un solo uso y vencimiento.
+
+## Supervisor
+
+Al crear un supervisor se requiere un nombre de escritura libre (hasta 100 caracteres), sin asignación de comercial. El administrador puede editarlo en Cuentas existentes. Aparece en la bienvenida, el perfil y la barra lateral. La migración `20261011010000_supervisor_display_name` agrega un campo opcional y conserva las cuentas anteriores. Solo tiene Vista general, Agenda de servicios y Registro de instructores; puede gestionar confirmaciones y exportar ese registro. El servidor bloquea las demás herramientas. Su tutorial describe esos tres apartados.
+
+Prueba local: `SMOKE_BASE_URL=http://127.0.0.1:3079 node scripts/supervisor-access-smoke.mjs`.

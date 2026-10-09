@@ -40,7 +40,7 @@ export async function GET(req: Request) {
       location: dayModality(s.modality, d.modality) === 'VIRTUAL' ? 'Virtual' : s.location ? `${s.location.department} / ${s.location.district}` : 'Sin registrar',
       instructionalMinutes: d.startTime && d.endTime ? classHours(d.startTime, d.endTime)?.instructionalMinutes ?? null : null
     })))).sort((a, b) => a.date.localeCompare(b.date) || a.instructor.localeCompare(b.instructor, 'es') || a.company.localeCompare(b.company, 'es') || a.id.localeCompare(b.id));
-    return NextResponse.json({ rows, canConfirm: actor.role !== 'SUPERVISOR', canManageConfirmations: actor.role === 'ADMIN' }, { headers: { 'Cache-Control': 'private, no-store' } });
+    return NextResponse.json({ rows, canConfirm: true, canManageConfirmations: actor.role === 'ADMIN' || actor.role === 'SUPERVISOR' }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) { return recordError(error); }
 }
 
@@ -48,10 +48,10 @@ export async function PATCH(req: Request) {
   try {
     const actor = await currentUser();
     if (!actor) return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 });
-    if (actor.role !== 'ADMIN' && actor.role !== 'SALES') return NextResponse.json({ error: 'Acceso de consulta' }, { status: 403 });
+    if (actor.role !== 'ADMIN' && actor.role !== 'SALES' && actor.role !== 'SUPERVISOR') return NextResponse.json({ error: 'Acceso de consulta' }, { status: 403 });
     const body = await req.json();
     if (!body || typeof body.serviceId !== 'string' || !body.serviceId || body.serviceId.length > 100 || typeof body.instructorId !== 'string' || !body.instructorId || body.instructorId.length > 100 || typeof body.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.date) || !invoiceDate(body.date) || typeof body.confirmed !== 'boolean') throw new InvalidRecord('Selecciona una jornada válida');
-    if (actor.role !== 'ADMIN' && !body.confirmed) return NextResponse.json({ error: 'Solo un administrador puede quitar la confirmación' }, { status: 403 });
+    if (actor.role === 'SALES' && !body.confirmed) return NextResponse.json({ error: 'Solo un administrador o supervisor puede quitar la confirmación' }, { status: 403 });
     const result = await prisma.$transaction(async tx => {
       // Same lock used by service edits/trash: validate the current row and save atomically.
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${body.serviceId}))::text`;

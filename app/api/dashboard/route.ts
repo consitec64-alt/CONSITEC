@@ -110,7 +110,7 @@ export async function GET(req: Request) {
       totalEstimatedBilling,
       totalInvoicedBilling,
       invoicedBySalesperson,
-      totalUniqueCustomers,
+      totalUniqueCustomers, totalCertificateSales: certificateSales.length,
       billingGoal: 200000,
       billingGoalAchieved: totalInvoicedBilling >= 200000,
       topSalesRep,

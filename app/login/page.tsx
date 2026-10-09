@@ -20,7 +20,7 @@ export default function LoginPage() {
       let name: string|null=null;
       try {
         const me=await fetch("/api/auth/me",{cache:"no-store",signal:AbortSignal.timeout(2500)});
-        if(me.ok){const user=await me.json();name=typeof user.salesperson?.name==="string"?user.salesperson.name:null;}
+        if(me.ok){const user=await me.json();name=typeof user.displayName==="string"?user.displayName:typeof user.salesperson?.name==="string"?user.salesperson.name:null;}
       }catch{/* A temporary profile failure must not prevent access. */}
       setWelcome({name});
     } catch (err) { setError(err instanceof Error ? err.message : "No se pudo iniciar sesión. Inténtalo nuevamente."); setLoading(false); }

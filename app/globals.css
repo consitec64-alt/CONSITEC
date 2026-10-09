@@ -361,3 +361,18 @@ html[data-text-size]:not([data-text-size=normal]) small{font-size:calc(11px * va
 .register-confirm-dialog::backdrop{background:rgba(8,20,35,.55)}.register-confirm-dialog strong{overflow-wrap:anywhere}.register-confirm-dialog .dialog-actions{flex-wrap:wrap}
 .confirmation-lock-note{display:block;max-width:140px;margin-top:5px}
 @media(prefers-reduced-motion:reduce){.clock-hour-hand{transition:none}}
+
+.agenda-card-stack{position:relative;isolation:isolate;margin-bottom:15px}
+.compact-service-card{position:relative;z-index:2;display:flex;flex-direction:column;gap:6px;width:100%;border:1px solid var(--border);text-align:left;font:inherit;color:var(--ink);margin-bottom:0!important;min-width:0}
+.compact-service-card strong,.compact-service-card span,.compact-service-card small{display:block;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere;max-width:100%}
+.compact-service-card:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.has-stack:before,.has-stack:after{content:'';position:absolute;inset:8px 4px -8px;z-index:1;background:var(--bg);border:1px solid var(--border);border-radius:10px}
+.has-stack:before{inset:14px 8px -14px;z-index:0}
+
+.clock-sphere{position:relative;width:240px;height:240px;margin:8px auto 12px}
+.interactive-clock-face{display:block;width:240px;height:240px}
+.clock-number-button{position:absolute;transform:translate(-50%,-50%);width:32px;height:32px;display:grid;place-items:center;border:0;border-radius:50%;padding:0;background:var(--surface,#fff);color:var(--ink);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;z-index:1}
+.clock-number-button:hover{background:var(--border)}.clock-number-button.selected{background:var(--blue);color:#fff}.clock-number-button:focus-visible{outline:2px solid var(--orange);outline-offset:1px}
+.dial-digital{text-align:center}.clock-popup:has(.clock-sphere){width:286px;max-width:calc(100vw - 60px)}
+@media(max-width:360px){.clock-sphere,.interactive-clock-face{width:220px;height:220px}.clock-sphere{margin-left:auto;margin-right:auto}}
+.has-stack:not(.many-stack):before{display:none}
