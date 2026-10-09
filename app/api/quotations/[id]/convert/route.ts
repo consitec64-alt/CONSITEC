@@ -1,0 +1,2 @@
+import {NextResponse} from 'next/server';import {quotationActor,quotationError} from '@/lib/quotations';import {writeService} from '@/lib/service-scheduling';
+export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){try{const actor=await quotationActor(),{id}=await params;return NextResponse.json(await writeService(await req.json(),undefined,actor.id,id));}catch(e){return quotationError(e);}}

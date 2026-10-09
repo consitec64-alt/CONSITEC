@@ -1,3 +1,4 @@
+import { cleanupQuotationFiles } from '@/lib/quotation-file-cleanup';
 import { assertMonthsOpen } from '@/lib/monthly-close';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
@@ -8,6 +9,7 @@ export const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 export const expiredBefore = () => new Date(Date.now() - RETENTION_MS);
 export async function purgeExpired() {
   const deletedAt = { lte: expiredBefore() };
+  await cleanupQuotationFiles();
   // Physical deletion only of records whose seven-day recovery window has ended.
   await prisma.$transaction([prisma.service.deleteMany({ where: { deletedAt } }), prisma.certificateSale.deleteMany({ where: { deletedAt } })]);
 }

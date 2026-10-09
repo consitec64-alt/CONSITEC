@@ -22,8 +22,8 @@ export async function removeCatalog(entity: Exclude<keyof typeof models,'USER'>,
     const model = tx[models[entity]] as unknown as { findUniqueOrThrow(args:{where:{id:string}}):Promise<unknown>;delete(args:{where:{id:string}}):Promise<unknown> };
     const before = await model.findUniqueOrThrow({where:{id}});
     const where: Prisma.ServiceWhereInput = entity==='COURSE' ? {OR:[{courseId:id},{courses:{some:{id}}}]} : entity==='LOCATION'?{locationId:id}:entity==='INSTRUCTOR'?{instructorId:id}:{salespersonId:id};
-    const used = await tx.service.count({where}) + (entity==='COURSE' || entity==='SALESPERSON' ? await tx.certificateSale.count({where:entity==='COURSE'?{courseId:id}:{salespersonId:id}}):0) + (entity==='SALESPERSON' ? await tx.user.count({where:{salespersonId:id}}):0);
-    if (used) throw new InvalidRecord('No se puede eliminar: está vinculado a servicios, ventas o cuentas. Conserva el catálogo para proteger los registros y su recuperación.');
+    const used = (entity==='COURSE'||entity==='SALESPERSON'?await tx.quotation.count({where:entity==='COURSE'?{courses:{some:{id}}}:{salespersonId:id}}):0) + await tx.service.count({where}) + (entity==='COURSE' || entity==='SALESPERSON' ? await tx.certificateSale.count({where:entity==='COURSE'?{courseId:id}:{salespersonId:id}}):0) + (entity==='SALESPERSON' ? await tx.user.count({where:{salespersonId:id}}):0);
+    if (used) throw new InvalidRecord('No se puede eliminar: está vinculado a servicios, ventas, cotizaciones o cuentas. Conserva el catálogo para proteger los registros y su recuperación.');
     await model.delete({where:{id}});
     await audit(tx, actor, entity, 'DELETE', before, null);
   });

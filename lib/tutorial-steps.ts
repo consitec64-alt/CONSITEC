@@ -35,6 +35,26 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     service(field("certificatesOnly"), "Solo certificados", "Marca esta opción únicamente para registros de agenda correspondientes a certificados. Estas copias se excluyen del Registro de instructores y evitan duplicar la facturación."),
     service(".modal-overlay .dialog-actions", "Guardar, cancelar y editar", "Guardar registro valida los campos; Cancelar cierra la ventana. Después, el lápiz de una tarjeta permite editar y Guardar cambios. En esta demostración no se envía el formulario."),
     step("services", ".tour-delete-preview", "Eliminar y recuperar registros", "Las papeleras piden confirmación antes de eliminar. Cancelar conserva el registro. Servicios y certificados pasan a Papelera durante siete días; cuentas y catálogos no se recuperan allí. Los catálogos vinculados a registros no se pueden eliminar para proteger sus datos. Explicaremos la eliminación una sola vez.", { confirmation: true }),
+    step("quotations", ".quotations-panel", "Cotizaciones antes de la venta", "Registra propuestas sin sumarlas a ventas ni facturación. Los vendedores ven las de su comercial; los administradores ven todas. Este apartado reúne propuestas de todos los meses."),
+    step("quotations", ".quotation-filters", "Seguimiento de propuestas", "Filtra por estado y activa Seguimientos para hoy o vencidos para localizar las llamadas pendientes. Válida hasta determina el vencimiento automático de borradores y propuestas enviadas."),
+    step("quotations", '[data-tour="new-quotation"]', "Nueva cotización", "Abre la ficha para registrar una propuesta. Mostraremos sus campos sin guardar datos."),
+    ...[
+      ["company", "Cliente cotizado", "Registra la empresa o cliente; el comercial se asigna automáticamente desde tu cuenta."],
+      ["contact", "Contacto", "Anota el nombre, correo o teléfono de la persona con quien coordinas."],
+      ["participants", "Participantes", "Cantidad opcional de participantes de la capacitación."],
+      ["modality", "Modalidad cotizada", "Selecciona Virtual, Presencial o Por definir."],
+      ["courseIds", "Cursos cotizados", "Selecciona uno o varios cursos del catálogo. Comparten el importe total."],
+      ["amount", "Precio de la propuesta", "Importe total en soles. No se contabiliza mientras sea solo una cotización."],
+      ["status", "Estado de la propuesta", "Borrador, Enviada, Aceptada, Rechazada o Vencida. Cambiar a Enviada es un registro de seguimiento; el envío del PDF al cliente lo realiza el vendedor."],
+      ["validUntil", "Vigencia", "Opcional: indica hasta qué día es válida la oferta. Después se muestran vencidas las propuestas Borrador o Enviada."],
+      ["followUpDate", "Próximo contacto", "Registra el día en que volverás a contactar al cliente."],
+      ["tentativeDates", "Fechas tentativas", "Opcionales: escribe las fechas AAAA-MM-DD separadas por comas. Podrás confirmar o modificar todas las jornadas al crear el servicio."],
+      ["conditions", "Condiciones cotizadas", "Anota condiciones de pago, alcance y acuerdos de la propuesta."],
+      ["notes", "Observaciones comerciales", "Guarda comentarios sobre el seguimiento y la respuesta del cliente."]
+    ].map(([name,title,text])=>step("quotations", `.quotation-dialog [name="${name}"]`, title, text)),
+    step("quotations", ".quotation-dialog .dialog-actions", "Guardar la propuesta", "Guarda primero la cotización. Después abre su ficha para adjuntar el PDF preparado por el vendedor. Esta demostración no guarda."),
+    step("quotations", ".quotation-dialog .quotation-pdf", "Adjuntar tu PDF", "Sube tu propio PDF de hasta 10 MB; CONSITEC no lo genera. Se almacena de forma privada y permite abrirlo o descargarlo con acceso al comercial. Puedes conservar varias versiones. Aquí la carga está deshabilitada por ser un ejemplo."),
+    step("quotations", ".quotation-table", "Convertir en servicio", "Marca la propuesta como Aceptada y guarda. Crear servicio solicita correlativo de cuatro dígitos, fechas, horarios e instructor. Copia el cliente, cursos, modalidad, precio y comercial. Una cotización solo genera un servicio; después se edita desde la agenda."),
     step("certificates", ".sale-summary", "Totales de certificados", "Consulta los importes separados entre personas naturales y empresas, y el total de los registros filtrados."),
     step("certificates", ".content-area .table-scroll", "Tabla de certificados", "La tabla reúne cliente, tipo, comercial, importe, fecha y estado. El lápiz permite corregir una venta existente."),
     step("certificates", ".page-heading > button", "Nueva venta", "Abre el formulario de certificados. Ahora mostraremos sus campos sin crear una venta."),
@@ -112,7 +132,7 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     step("summary", ".tour-close-preview", "Confirmar o reabrir el mes", "Cerrar bloquea altas, ediciones, eliminaciones y restauraciones que afecten al mes, incluidas sus fechas de facturación. Solo un administrador puede reabrirlo; ambas acciones quedan en el historial. Un servicio de varios meses requiere que todos estén abiertos. Este ejemplo no cierra ningún mes.", {admin:true,preview:"monthly-close"}),
     step("summary", '[data-tour="monthly-close"]', "Consultar un mes cerrado", "Puedes consultar los reportes de un mes cerrado. Si necesitas corregir un servicio o venta que lo afecte, solicita a un administrador que reabra el mes.", {admin:false}),
   ].filter(s => (!s.admin || isAdmin) && !(isAdmin && s.title === "Consultar un mes cerrado"));
-  const order = ["summary", "services", "certificates", "performance", "instructors", "support", "history", "trash", "users"];
+  const order = ["summary", "services", "quotations", "certificates", "performance", "instructors", "support", "history", "trash", "users"];
   const common = new Set(["Contraer el menú", "Cerrar sesión"]);
   const main = items.filter(s=>!common.has(s.title)).sort((a,b)=>order.indexOf(a.tab)-order.indexOf(b.tab));
   // Shared warnings belong with the service form, before leaving the agenda.

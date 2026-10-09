@@ -63,6 +63,7 @@ model Instructor {
 }
 
 model Course {
+  quotations Quotation[] @relation("QuotationCourses")
   id               String            @id @default(cuid())
   name             String            @unique
   services         Service[]
@@ -72,6 +73,7 @@ model Course {
 }
 
 model Salesperson {
+  quotations Quotation[]
   id               String            @id @default(cuid())
   name             String            @unique
   color            String            @default("#234eaa")
@@ -90,6 +92,7 @@ model Location {
 }
 
 model Service {
+  quotation Quotation?
   deletedAt DateTime?
   @@index([deletedAt])
   id               String        @id @default(cuid())
@@ -176,4 +179,48 @@ model MonthlyClose {
   closedAt DateTime?
   closedBy String?
   closedByName String?
+}
+
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+model Quotation {
+  id String @id @default(cuid())
+  company String
+  contact String @default("")
+  participants Int?
+  amount Decimal @db.Decimal(10, 2)
+  modality ClassModality?
+  tentativeDates String[]
+  validUntil DateTime?
+  followUpDate DateTime?
+  conditions String @default("")
+  notes String @default("")
+  status QuotationStatus @default(DRAFT)
+  salespersonId String
+  salesperson Salesperson @relation(fields: [salespersonId], references: [id])
+  courses Course[] @relation("QuotationCourses")
+  serviceId String? @unique
+  convertedAt DateTime?
+  service Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  documents QuotationDocument[]
+  @@index([salespersonId, createdAt])
+}
+model QuotationDocument {
+  id String @id @default(cuid())
+  quotationId String
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  name String
+  pathname String @unique
+  size Int
+  state String @default("PENDING")
+  createdAt DateTime @default(now())
+  @@index([quotationId, state])
 }
