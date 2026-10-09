@@ -1,11 +1,11 @@
-export type TutorialStep = { tab: string; target: string; title: string; text: string; form?: "service" | "sale"; admin?: boolean; detail?: boolean; confirmation?: boolean; preview?: "duplicate" };
+export type TutorialStep = { tab: string; target: string; title: string; text: string; form?: "service" | "sale"; admin?: boolean; detail?: boolean; confirmation?: boolean; preview?: "duplicate" | "monthly-close" };
 const field = (name: string) => `.modal-overlay [name="${name}"]`;
 const step = (tab: string, target: string, title: string, text: string, extra: Partial<TutorialStep> = {}): TutorialStep => ({ tab, target, title, text, ...extra });
 const service = (target: string, title: string, text: string) => step("services", target, title, text, { form: "service" });
 const sale = (target: string, title: string, text: string) => step("certificates", target, title, text, { form: "sale" });
 const instructor = (target: string, title: string, text: string) => step("support", `.instructor-card > .instructor-details:last-child ${target}`, title, text, { detail: true });
 export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
-  return [
+  const items = [
     step("summary", "nav", "Tu espacio de trabajo", "Los iconos del menú abren cada apartado. El tutorial irá mostrando las vistas y sus controles. Los formularios se abren como demostración: este recorrido no guarda ventas ni modifica datos."),
     step("summary", ".period-picker", "Mes y año", "Elige el mes y el año o usa las flechas para consultar el período anterior o siguiente. Los indicadores y tablas se actualizan para esa selección."),
     step("summary", ".billing-metrics", "Indicadores del mes", "Consulta jornadas, facturación estimada, total facturado, comercial destacado y curso más vendido. Los clientes únicos aparecen junto al contador de servicios y certificados, aunque repitan compras."),
@@ -102,13 +102,26 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     step("users", ".user-email-form [name=email], .user-account-list", "Cambiar correo", "Escribe el nuevo correo y pulsa Guardar correo. La contraseña actual se conserva y el siguiente ingreso usa el correo nuevo.", { admin: true }),
     step("users", ".user-email-form [name=salespersonId], .user-account-list", "Cambiar el comercial asignado", "Selecciona el comercial y pulsa Guardar comercial. Solo las nuevas ventas usan la nueva asignación.", { admin: true }),
     step("summary", ".sidebar-toggle, .mobile-menu", "Contraer el menú", "La flecha reduce la barra lateral a iconos. También puedes deslizarla. En móvil el botón de menú despliega la navegación."),
-    step("summary", ".theme-toggle", "Tema claro y oscuro", "El botón de sol o luna cambia el tema. Tu elección se conserva en este dispositivo."),
     step("summary", ".logout-button", "Cerrar sesión", "El botón está abajo en la barra lateral y finaliza tu sesión en este dispositivo."),
-    step("summary", '[data-tour="replay"]', "Repetir el tutorial", "Puedes repetir el recorrido con Ver tutorial o el icono de ayuda en móvil. Finalizar u Omitir evita que se abra automáticamente. Tu avance se guarda en la cuenta."),
     step("services", ".tour-duplicate-preview", "Aviso de posible duplicado", "Si el cliente, un curso y una fecha coinciden con otro registro, verás este aviso antes de guardar. Volver y revisar conserva el formulario; Guardar de todos modos permite una venta distinta. El aviso también se aplica al editar y a los certificados. Este es solo un ejemplo.", { preview: "duplicate" }),
     step("history", ".history-panel", "Historial de cambios", "Consulta quién creó, editó, envió a papelera o restauró un registro y cuándo. También se registran cambios en catálogos y cuentas, sin contraseñas. Comienza desde que se activa esta función; no reconstruye cambios antiguos."),
     step("history", ".history-entry, .history-panel", "Ver qué cambió", "Despliega un cambio para comparar Antes y Después. Usa las páginas para consultar eventos anteriores. Los administradores ven todo; los vendedores ven su comercial y sus propias acciones."),
     step("trash", ".trash-panel", "Papelera durante siete días", "Los servicios y ventas eliminados dejan de contar en los reportes y permanecen recuperables durante siete días. La tabla indica el vencimiento exacto. Después de ese límite ya no se pueden restaurar."),
     step("trash", ".trash-panel .table-scroll", "Restaurar un registro", "Restaurar conserva el importe, fechas, cursos y estado originales. Se vuelve a comprobar la disponibilidad del instructor. Los vendedores recuperan registros de su comercial; los administradores pueden recuperar todos. Las cuentas y los catálogos no se recuperan aquí."),
-  ].filter(s => !s.admin || isAdmin);
+    step("summary", '[data-tour="monthly-close"]', "Cierre mensual", "Solo administradores pueden cerrar un mes desde su último día, según la hora de Perú. Aparece un aviso para revisar el cierre y puedes posponerlo. Revisa la agenda y los reportes antes de confirmar.", {admin:true}),
+    step("summary", ".tour-close-preview", "Confirmar o reabrir el mes", "Cerrar bloquea altas, ediciones, eliminaciones y restauraciones que afecten al mes, incluidas sus fechas de facturación. Solo un administrador puede reabrirlo; ambas acciones quedan en el historial. Un servicio de varios meses requiere que todos estén abiertos. Este ejemplo no cierra ningún mes.", {admin:true,preview:"monthly-close"}),
+    step("summary", '[data-tour="monthly-close"]', "Consultar un mes cerrado", "Puedes consultar los reportes de un mes cerrado. Si necesitas corregir un servicio o venta que lo afecte, solicita a un administrador que reabra el mes.", {admin:false}),
+  ].filter(s => (!s.admin || isAdmin) && !(isAdmin && s.title === "Consultar un mes cerrado"));
+  const order = ["summary", "services", "certificates", "performance", "instructors", "support", "history", "trash", "users"];
+  const common = new Set(["Contraer el menú", "Cerrar sesión"]);
+  const main = items.filter(s=>!common.has(s.title)).sort((a,b)=>order.indexOf(a.tab)-order.indexOf(b.tab));
+  // Shared warnings belong with the service form, before leaving the agenda.
+  const duplicate = main.findIndex(s=>s.preview==="duplicate");
+  const [warning] = main.splice(duplicate,1);
+  const deletion = main.findIndex(s=>s.confirmation);
+  main.splice(deletion,0,warning);
+  return [...main,...items.filter(s=>common.has(s.title)),
+    step("summary", '[data-tour="refresh"]', "Actualizar", "Actualiza los datos y el estado del cierre mensual. Si otro usuario hizo cambios, este botón permite consultarlos sin cerrar tu sesión."),
+    step("summary", ".theme-toggle", "Tema claro y oscuro", "El botón de sol o luna cambia el tema. Tu elección se conserva en este dispositivo."),
+    step("summary", '[data-tour="replay"]', "Repetir el tutorial", "Puedes repetir el recorrido con Ver tutorial o el icono de ayuda en móvil. Finalizar u Omitir evita que se abra automáticamente. Tu avance se guarda en la cuenta.")];
 }

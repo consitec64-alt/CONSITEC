@@ -170,3 +170,10 @@ model AuditLog {
   @@index([createdAt])
   @@index([salespersonId, createdAt])
 }
+
+model MonthlyClose {
+  id String @id
+  closedAt DateTime?
+  closedBy String?
+  closedByName String?
+}

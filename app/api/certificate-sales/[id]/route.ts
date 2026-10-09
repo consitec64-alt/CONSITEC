@@ -1,3 +1,4 @@
+import { assertMonthsOpen } from '@/lib/monthly-close';
 export const dynamic = "force-dynamic";
 
 import { audit } from "@/lib/audit";
@@ -22,9 +23,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const updated = await prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))::text`;
       const existing = await tx.certificateSale.findUniqueOrThrow({ where: { id, deletedAt: null }, include: { course: true, salesperson: true } });
+      const invoicedAt=invoiceDateFor(data.status, requestedInvoiceDate, existing);
+      await assertMonthsOpen(tx,existing,{...data,invoicedAt});
       const duplicates = await saleDuplicates(tx, data.customerName, data.courseId, data.saleDate, id);
       if (duplicates.length && body.allowDuplicate !== true) throw new PossibleDuplicate(duplicates);
-      const saved = await tx.certificateSale.update({ where: { id }, data: { ...data, invoicedAt: invoiceDateFor(data.status, requestedInvoiceDate, existing) }, include: { course: true, salesperson: true } });
+      const saved = await tx.certificateSale.update({ where: { id }, data: { ...data, invoicedAt }, include: { course: true, salesperson: true } });
       await audit(tx, actor, "CERTIFICATE", "UPDATE", existing, saved);
       return saved;
     });
