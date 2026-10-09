@@ -4,8 +4,8 @@ import { Plus, Trash2 } from 'lucide-react';
 import { classHours, durationLabel } from '@/lib/class-hours';
 import { Meta, Service, serviceDays } from '@/lib/ui-types';
 
-export default function ServiceFields({ service, defaultDate, instructors }: { service: Service | null; defaultDate: string; instructors: Meta[] }) {
-  const [sessions, setSessions] = useState(() => (service ? serviceDays(service) : [defaultDate]).map(date => {
+export default function ServiceFields({ service, defaultDate, initialDates, fixedModality, instructors }: { service: Service | null; defaultDate: string; initialDates?: string[]; fixedModality?: string | null; instructors: Meta[] }) {
+  const [sessions, setSessions] = useState(() => (service ? serviceDays(service) : initialDates?.length ? initialDates : [defaultDate]).map(date => {
     const saved = service?.dates?.find(d => d.date.slice(0, 10) === date);
     return { date, startTime: saved?.startTime || '', endTime: saved?.endTime || '' };
   }));
@@ -33,7 +33,7 @@ export default function ServiceFields({ service, defaultDate, instructors }: { s
   return <>
     <label className="full-width">Código de correlativo<input name="correlativeCode" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} defaultValue={service?.correlativeCode || ''} placeholder="Ej. 0042" title="Exactamente 4 dígitos numéricos" required /></label>
     <input type="hidden" name="sessions" value={JSON.stringify(sessions)} />
-    <label>Modalidad de la clase<select name="modality" defaultValue={service?.modality || ''} required><option value="">Selecciona la modalidad</option><option value="VIRTUAL">Virtual</option><option value="IN_PERSON">Presencial</option></select></label>
+    <label>Modalidad de la clase<select name="modality" disabled={!!fixedModality} defaultValue={fixedModality || service?.modality || ''} required><option value="">Selecciona la modalidad</option><option value="VIRTUAL">Virtual</option><option value="IN_PERSON">Presencial</option></select></label>
     <fieldset className="service-dates full-width"><legend>Fechas y horario de las clases</legend><p>Cada fecha cuenta como un servicio. El importe es único para todas las clases. Horario de 00:00 a 23:59, dentro del mismo día.</p>{sessions.map((session, index) => {
       const hours = classHours(session.startTime, session.endTime);
       return <div className="class-session" key={index}><div className="class-session-fields"><label>Fecha {index + 1}<input name="serviceDates" type="date" value={session.date} required onChange={e => changeSession(index, 'date', e.target.value)} /></label><label>Inicio (24 h)<input name="startTime" type="text" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" maxLength={5} placeholder="09:00" autoComplete="off" value={session.startTime} required onChange={e => changeSession(index, 'startTime', e.target.value)} /></label><label>Fin (24 h)<input name="endTime" type="text" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" maxLength={5} placeholder="15:00" autoComplete="off" value={session.endTime} required onChange={e => changeSession(index, 'endTime', e.target.value)} /></label><button type="button" className="icon-button danger" disabled={sessions.length === 1} aria-label={`Quitar fecha ${index + 1}`} onClick={() => setSessions(previous => previous.filter((_, i) => i !== index))}><Trash2 size={17} /></button></div><small aria-live="polite">{hours ? `${durationLabel(hours.instructionalMinutes)} de clase${hours.breakMinutes ? ' · descanso de 1 h descontado' : ' · sin descuento de descanso'}` : session.startTime && session.endTime ? 'El fin debe ser posterior al inicio.' : 'Completa el inicio y fin para calcular la duración.'}</small></div>;

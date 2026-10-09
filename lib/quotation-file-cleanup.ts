@@ -1,0 +1,2 @@
+import {del} from '@vercel/blob';import {prisma} from '@/lib/prisma';
+export async function cleanupQuotationFiles(){if(!process.env.BLOB_READ_WRITE_TOKEN)return;const stale=await prisma.quotationDocument.findMany({where:{state:'PENDING',createdAt:{lt:new Date(Date.now()-86400000)}},take:100});for(const doc of stale){try{await del(doc.pathname);await prisma.quotationDocument.delete({where:{id:doc.id}});}catch{/* Daily maintenance retries incomplete uploads. */}}}
