@@ -104,8 +104,8 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 }
 
 /* Theme variables and surfaces cover the dashboard, forms, login and Users. */
-:root{--surface:#fff;--soft:#f0f4fb;--tooltip:#fff}
-:root[data-theme=dark]{color-scheme:dark;--blue:#8aafff;--navy:#0c172b;--orange:#ffb36f;--ink:#e6edf8;--muted:#a8b6cc;--border:#314058;--bg:#101827;--surface:#1b2638;--soft:#24324a;--tooltip:#1b2638}
+:root{--surface:#fff;--soft:#f0f4fb;--tooltip:#fff;--hover-bg:#fafcff;--chart-hover:#f3f6fb}
+:root[data-theme=dark]{color-scheme:dark;--blue:#8aafff;--navy:#0c172b;--orange:#ffb36f;--ink:#e6edf8;--muted:#a8b6cc;--border:#314058;--bg:#101827;--surface:#1b2638;--soft:#24324a;--tooltip:#1b2638;--hover-bg:#26344a;--chart-hover:rgba(138,175,255,.09)}
 [data-theme=dark] .sidebar,[data-theme=dark] .topbar,[data-theme=dark] .panel,[data-theme=dark] .metric-card,[data-theme=dark] .period-picker,[data-theme=dark] .search-box,[data-theme=dark] .dialog,[data-theme=dark] .login-form-panel,[data-theme=dark] .refresh-button,[data-theme=dark] input,[data-theme=dark] select,[data-theme=dark] .toast{background:var(--surface);color:var(--ink);border-color:var(--border)}
 [data-theme=dark] .search-box input{background:transparent}
 [data-theme=dark] .nav-item,[data-theme=dark] .metric-card>.split>span,[data-theme=dark] .goal span,[data-theme=dark] .day-number,[data-theme=dark] .icon-button,[data-theme=dark] th{color:var(--muted)}
@@ -187,3 +187,9 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
   .mixed-session-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .mixed-session-fields > .session-modality { grid-column: 1; }
 }
+
+/* Keep hover highlights subdued in dark mode, including table rows and chart bars. */
+[data-theme=dark] tbody tr:hover { background: var(--hover-bg); }
+[data-theme=dark] .refresh-button:hover,
+[data-theme=dark] .btn.secondary:hover { background: var(--hover-bg); }
+[data-theme=dark] .icon-button.danger:hover { background: #492c36; color: #ffb1bf; }
