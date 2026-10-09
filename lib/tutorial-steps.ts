@@ -126,7 +126,7 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     step("users", '.users-form [name="role"]', "Rol de la cuenta", "Vendedor accede a la operación comercial. Administrador también gestiona usuarios, comerciales y colores del ranking.", { admin: true }),
     step("users", '.users-form [name="salespersonId"]', "Asignar un comercial", "Selecciona el comercial al que pertenecerán las nuevas ventas y servicios de esta cuenta. La asignación es obligatoria al crearla.", { admin: true }),
     step("users", ".users-form-footer", "Crear usuario", "Crear usuario valida los datos y habilita el acceso. No creamos una cuenta de ejemplo durante este recorrido.", { admin: true }),
-    step("users", ".user-account-list, .users-page > .panel:nth-of-type(2)", "Cuentas existentes", "Cada cuenta muestra su rol y permite guardar un correo nuevo o cambiar el comercial asignado. Cambiar la asignación no mueve las ventas históricas.", { admin: true }),
+    step("users", ".user-account-list, #existing-accounts", "Cuentas existentes", "Cada cuenta muestra su rol y permite guardar un correo nuevo o cambiar el comercial asignado. Cambiar la asignación no mueve las ventas históricas.", { admin: true }),
     step("users", ".user-email-form [name=email], .user-account-list", "Cambiar correo", "Escribe el nuevo correo y pulsa Guardar correo. La contraseña actual se conserva y el siguiente ingreso usa el correo nuevo.", { admin: true }),
     step("users", ".user-email-form [name=salespersonId], .user-account-list", "Cambiar el comercial asignado", "Selecciona el comercial y pulsa Guardar comercial. Solo las nuevas ventas usan la nueva asignación.", { admin: true }),
     step("summary", ".sidebar-toggle, .mobile-menu", "Contraer el menú", "La flecha reduce la barra lateral a iconos. También puedes deslizarla. En móvil el botón de menú despliega la navegación."),
@@ -140,6 +140,22 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     step("summary", ".tour-close-preview", "Confirmar o reabrir el mes", "Cerrar bloquea altas, ediciones, eliminaciones y restauraciones que afecten al mes, incluidas sus fechas de facturación. Solo un administrador puede reabrirlo; ambas acciones quedan en el historial. Un servicio de varios meses requiere que todos estén abiertos. Este ejemplo no cierra ningún mes.", {admin:true,preview:"monthly-close"}),
     step("summary", '[data-tour="monthly-close"]', "Consultar un mes cerrado", "Puedes consultar los reportes de un mes cerrado. Si necesitas corregir un servicio o venta que lo afecte, solicita a un administrador que reabra el mes.", {admin:false}),
   ].filter(s => (!s.admin || isAdmin) && !(isAdmin && s.title === "Consultar un mes cerrado"));
+  const bannerGuides:Record<string,string> = {
+    services:'Registrar servicio abre el formulario. Ver instructores lleva al registro de clases y horas.',
+    quotations:'Nueva cotización abre una propuesta. Ver agenda muestra los servicios programados.',
+    certificates:'Nueva venta abre certificados. Ver rendimiento lleva a los resultados comerciales.',
+    performance:isAdmin?'Resumen por comercial lleva al detalle mensual. Configurar semanas despliega los rangos del mes.':'Resumen por comercial lleva al detalle mensual. Consultar semanas muestra los rangos que definió un administrador.',
+    instructors:'Ir a los filtros lleva a la selección de instructor y fechas. Ver agenda muestra las clases originales.',
+    support:'Fichas de instructores y Catálogo de cursos llevan directamente a esos apartados.',
+    history:'Buscar un cambio lleva al buscador del historial. Abrir papelera permite consultar registros eliminados.',
+    trash:'Revisar registros lleva a los elementos recuperables. Ver historial muestra sus cambios.',
+    users:'Crear un acceso lleva al formulario de cuenta. Cuentas existentes lleva a los accesos registrados.'
+  };
+  for (const [tab,text] of Object.entries(bannerGuides)) {
+    if(tab==='users'&&!isAdmin)continue;
+    const index=items.findIndex(item=>item.tab===tab);
+    items.splice(Math.max(0,index),0,step(tab,'.workspace-banner',`Accesos de ${tab==='services'?'agenda':tab==='quotations'?'cotizaciones':tab==='certificates'?'certificados':tab==='performance'?'rendimiento':tab==='instructors'?'instructores':tab==='support'?'soporte':tab==='history'?'historial':tab==='trash'?'papelera':'usuarios'}`,text,{admin:tab==='users'}));
+  }
   const order = ["summary", "services", "quotations", "certificates", "performance", "instructors", "support", "history", "trash", "users"];
   const common = new Set(["Contraer el menú", "Cerrar sesión"]);
   const main = items.filter(s=>!common.has(s.title)).sort((a,b)=>order.indexOf(a.tab)-order.indexOf(b.tab));

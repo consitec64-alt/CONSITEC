@@ -301,3 +301,19 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 .chart-height { min-width: 0; overflow: hidden; }
 .record-dialog .catalog-search { min-width: 0; }
 .record-dialog .catalog-search input { min-width: 0; }
+
+/* A shared brand header gives each workspace its own message and quick paths. */
+.workspace-banner { position: relative; isolation: isolate; background: linear-gradient(112deg,#12324e,var(--banner-end,#185881)); min-width: 0; }
+.workspace-banner::before { content: ''; position: absolute; width: 300px; height: 300px; border: 1px solid #ffffff12; border-radius: 50%; right: -95px; top: -140px; z-index: -1; }
+.workspace-banner::after { content: ''; position: absolute; width: 340px; height: 340px; background: radial-gradient(circle,#ffffff0b,transparent 68%); right: -45px; bottom: -210px; z-index: -1; }
+.workspace-banner-copy { flex: 1; min-width: 0; }
+.workspace-banner h2 { max-width: 740px; }
+.workspace-banner .overview-mark { width: 132px; height: 132px; padding: 22px; }
+.workspace-banner-meta { display: inline-flex; padding: 5px 9px; border: 1px solid #ffffff30; border-radius: 20px; color: #c8dce9; font-size: 10px; margin-top: 16px; text-transform: capitalize; }
+.workspace-banner .overview-actions .btn { display: inline-flex; align-items: center; justify-content: center; }
+.workspace-banner .overview-actions .btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.users-page .workspace-banner { margin: 22px 0; }
+@media(max-width:760px) { .workspace-banner .overview-actions { flex-direction: column; align-items: stretch; }.workspace-banner .overview-actions .btn { flex: none; min-height: 40px; }.workspace-banner h2 { font-size: 23px; }.workspace-banner::before { right: -170px; } }
+
+.company-footer .app-version{flex-basis:100%;text-align:right;font-size:11px;color:var(--muted)}
+@media(max-width:760px){.company-footer .app-version{align-self:flex-end}}
