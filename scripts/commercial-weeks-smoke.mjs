@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';import {PrismaClient} from '@prisma/client';import bcrypt from 'bcrypt';
+const db=new PrismaClient(),base=process.env.SMOKE_BASE_URL||'http://127.0.0.1:3063',tag='weeks-'+randomUUID(),password=randomUUID();assert.equal(new URL(process.env.DATABASE_URL).hostname,'localhost');const users=[];let rep,course,owned=false;let checks=0;const id='2093-02';
+async function api(path,cookie,body,method=body?'POST':'GET',status=200){checks++;const r=await fetch(base+path,{method,headers:{...(cookie?{cookie}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});const d=await r.json();assert.equal(r.status,status,JSON.stringify(d));return{data:d,cookie:r.headers.get('set-cookie')?.split(';')[0]};}
+try{
+ assert.equal(await db.commercialWeekPlan.count({where:{id}}),0);assert.equal(await db.monthlyClose.count({where:{id}}),0);owned=true;
+ rep=await db.salesperson.create({data:{name:tag}});course=await db.course.create({data:{name:tag}});
+ for(const role of ['ADMIN','SALES'])users.push(await db.user.create({data:{username:tag+role,password:await bcrypt.hash(password,10),role,salespersonId:role==='SALES'?rep.id:null,tutorialCompleted:true}}));
+ const admin=(await api('/api/auth/login',null,{username:users[0].username,password})).cookie,sales=(await api('/api/auth/login',null,{username:users[1].username,password})).cookie;
+ const url='/api/commercial-weeks?year=2093&month=2';await api(url,null,null,'GET',401);const defaults=(await api(url,sales)).data;assert.equal(defaults.weeks.length,4);assert.equal(defaults.weeks[3].endDate,'2093-02-28');
+ const ranges=[{startDate:'2093-02-01',endDate:'2093-02-04'},{startDate:'2093-02-05',endDate:'2093-02-10'},{startDate:'2093-02-11',endDate:'2093-02-16'},{startDate:'2093-02-17',endDate:'2093-02-22'},{startDate:'2093-02-23',endDate:'2093-02-28'}],body={year:2093,month:2,ranges,reset:false,expectedUpdatedAt:null};
+ await api('/api/commercial-weeks',sales,body,'POST',403);
+ for(const invalid of [[],[{startDate:'2093-02-02',endDate:'2093-02-28'}],[{startDate:'2093-02-01',endDate:'2093-02-30'}],[{startDate:'2093-01-31',endDate:'2093-02-28'}],[...ranges.slice(0,1),{startDate:'2093-02-04',endDate:'2093-02-28'}],[...ranges.slice(0,1),{startDate:'2093-02-06',endDate:'2093-02-28'}],[{startDate:'2093-02-10',endDate:'2093-02-01'}]])await api('/api/commercial-weeks',admin,{...body,ranges:invalid},'POST',400);
+ for(const day of [4,5,10,11,16,17,22,23,28])await db.service.create({data:{company:tag+' '+day,courseId:course.id,salespersonId:rep.id,amount:100,status:'INVOICED',invoicedAt:new Date('2093-02-28T09:00:00Z'),serviceDate:new Date(`2093-02-${String(day).padStart(2,'0')}T09:00:00Z`)}});
+ const before=(await api('/api/dashboard?year=2093&month=2',sales)).data;
+ const saved=(await api('/api/commercial-weeks',admin,body)).data;assert(saved.custom);assert(saved.updatedAt);const visible=(await api(url,sales)).data;assert.deepEqual(visible.weeks,saved.weeks);
+ const after=(await api('/api/dashboard?year=2093&month=2',sales)).data;assert.equal(after.totalServices,before.totalServices);assert.equal(after.totalInvoicedBilling,before.totalInvoicedBilling);assert.deepEqual(Object.values(after.weeklyMatrix[rep.name]),[1,2,2,2,2]);assert.equal(after.weeks.length,5);
+ await api('/api/commercial-weeks',admin,body,'POST',409);
+ await db.monthlyClose.create({data:{id,closedAt:new Date()}});await api('/api/commercial-weeks',admin,{...body,expectedUpdatedAt:saved.updatedAt},'POST',409);await db.monthlyClose.delete({where:{id}});
+ const reset=(await api('/api/commercial-weeks',admin,{...body,reset:true,expectedUpdatedAt:saved.updatedAt})).data;assert.equal(reset.weeks.length,4);assert.equal(reset.custom,false);
+ assert.equal((await db.auditLog.count({where:{entity:'WEEK_PLAN',recordId:id}})),2);
+ assert.equal((await api('/api/commercial-weeks?year=2092&month=2',sales)).data.weeks[3].endDate,'2092-02-29');
+ console.log(`PASS: commercial weeks (${checks} requests), admin-only writes, shared ranges, inclusive boundaries, gaps/overlaps/calendar validation, default/leap month, stable totals, stale save protection, close lock and audit/reset.`);
+}finally{if(owned){await db.commercialWeekPlan.deleteMany({where:{id}});await db.monthlyClose.deleteMany({where:{id}});}if(rep)await db.service.deleteMany({where:{salespersonId:rep.id}});await db.auditLog.deleteMany({where:{actorId:{in:users.map(u=>u.id)}}});await db.user.deleteMany({where:{id:{in:users.map(u=>u.id)}}});if(course)await db.course.delete({where:{id:course.id}});if(rep)await db.salesperson.delete({where:{id:rep.id}});await db.$disconnect();}

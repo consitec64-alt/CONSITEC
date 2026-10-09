@@ -226,3 +226,9 @@ model QuotationDocument {
   createdAt DateTime @default(now())
   @@index([quotationId, state])
 }
+
+model CommercialWeekPlan {
+  id String @id
+  ranges Json
+  updatedAt DateTime @updatedAt
+}

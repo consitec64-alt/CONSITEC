@@ -193,3 +193,13 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 [data-theme=dark] .refresh-button:hover,
 [data-theme=dark] .btn.secondary:hover { background: var(--hover-bg); }
 [data-theme=dark] .icon-button.danger:hover { background: #492c36; color: #ffb1bf; }
+
+.commercial-weeks { margin-bottom: 22px; }
+.week-range-summary { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.week-range-summary > span { padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; }
+.week-editor > summary { cursor: pointer; font-weight: 600; }
+.week-editor fieldset { border: 0; padding: 0; margin: 16px 0; min-width: 0; }
+.week-range-row { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; padding: 12px 0; }
+.week-range-row label { display: grid; gap: 6px; font-size: 12px; }
+.week-editor .dialog-actions { flex-wrap: wrap; }
+@media(max-width:760px) { .week-range-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }.week-range-row > strong { grid-column: 1 / -1; } }
