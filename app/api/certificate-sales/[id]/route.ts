@@ -19,15 +19,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const actor = await currentUser();
     if (!actor) return NextResponse.json({ error: "Debes iniciar sesión" }, { status: 401 });
     const { id } = await params;
-    const { requestedInvoiceDate, ...data } = saleInput(body);
+    const { requestedInvoiceDate, courseIds, ...data } = saleInput(body);
     const updated = await prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))::text`;
-      const existing = await tx.certificateSale.findUniqueOrThrow({ where: { id, deletedAt: null }, include: { course: true, salesperson: true } });
+      const existing = await tx.certificateSale.findUniqueOrThrow({ where: { id, deletedAt: null }, include: { course: true, courses: true, salesperson: true } });
       const invoicedAt=invoiceDateFor(data.status, requestedInvoiceDate, existing);
       await assertMonthsOpen(tx,existing,{...data,invoicedAt});
-      const duplicates = await saleDuplicates(tx, data.customerName, data.courseId, data.saleDate, id);
+      const duplicates = await saleDuplicates(tx, data.customerName, courseIds, data.saleDate, id);
       if (duplicates.length && body.allowDuplicate !== true) throw new PossibleDuplicate(duplicates);
-      const saved = await tx.certificateSale.update({ where: { id }, data: { ...data, invoicedAt }, include: { course: true, salesperson: true } });
+      if (await tx.course.count({where:{id:{in:courseIds}}}) !== courseIds.length) throw new InvalidRecord("Uno de los cursos seleccionados ya no existe");
+      const saved = await tx.certificateSale.update({ where: { id }, data: { ...data, invoicedAt, courses:{set:courseIds.map(id=>({id}))} }, include: { course: true, courses: true, salesperson: true } });
       await audit(tx, actor, "CERTIFICATE", "UPDATE", existing, saved);
       return saved;
     });

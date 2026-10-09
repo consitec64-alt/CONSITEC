@@ -9,11 +9,11 @@ export async function GET() {
   await purgeExpired();
   const where = { deletedAt: { gt: expiredBefore() }, ...(actor.role === 'ADMIN' ? {} : { salespersonId: actor.salespersonId || '__unassigned__' }) };
   const [services, sales] = await Promise.all([
-    prisma.service.findMany({ where, include: { salesperson: true, course: true }, orderBy: { deletedAt: 'desc' } }),
-    prisma.certificateSale.findMany({ where, include: { salesperson: true, course: true }, orderBy: { deletedAt: 'desc' } })
+    prisma.service.findMany({ where, include: { salesperson: true, course: true, courses: true }, orderBy: { deletedAt: 'desc' } }),
+    prisma.certificateSale.findMany({ where, include: { salesperson: true, course: true, courses: true }, orderBy: { deletedAt: 'desc' } })
   ]);
-  const rows = [...services.map(s => ({ entity: 'SERVICE', id: s.id, label: s.company, amount: s.amount.toString(), date: s.serviceDate, deletedAt: s.deletedAt!, salesperson: s.salesperson.name, course: s.course.name })),
-    ...sales.map(s => ({ entity: 'CERTIFICATE', id: s.id, label: s.customerName, amount: s.amount.toString(), date: s.saleDate, deletedAt: s.deletedAt!, salesperson: s.salesperson.name, course: s.course.name }))]
+  const rows = [...services.map(s => ({ entity: 'SERVICE', id: s.id, label: s.company, amount: s.amount.toString(), date: s.serviceDate, deletedAt: s.deletedAt!, salesperson: s.salesperson.name, course: (s.courses.length?s.courses:[s.course]).map(c=>c.name).join(" · ") })),
+    ...sales.map(s => ({ entity: 'CERTIFICATE', id: s.id, label: s.customerName, amount: s.amount.toString(), date: s.saleDate, deletedAt: s.deletedAt!, salesperson: s.salesperson.name, course: (s.courses.length?s.courses:[s.course]).map(c=>c.name).join(" · ") }))]
     .map(s => ({ ...s, expiresAt: new Date(s.deletedAt.getTime()+RETENTION_MS) })).sort((a,b)=>b.deletedAt.getTime()-a.deletedAt.getTime());
   return NextResponse.json({ rows });
 }

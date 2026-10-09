@@ -1,4 +1,4 @@
-import { Prisma, CustomerType, ServiceStatus, TravelMode, ClassModality } from "@prisma/client";
+import { Prisma, CustomerType, ServiceStatus, TravelMode, ClassModality, CertificateKind } from "@prisma/client";
 
 import { isDayModality } from "@/lib/class-modality";
 import { classHours } from "@/lib/class-hours";
@@ -26,10 +26,21 @@ export function invoiceDate(value: unknown): Date | undefined {
   const parsed = date(value);
   return new Date(parsed.toISOString().slice(0, 10) + "T09:00:00.000Z");
 }
+function selectedIds(value: unknown, label: string, allowEmpty = false): string[] {
+  if (!Array.isArray(value) || (!allowEmpty && !value.length) || value.length > 100) throw new InvalidRecord(`Selecciona ${allowEmpty ? 'hasta' : 'entre 1 y'} 100 ${label.toLowerCase()} del catálogo`);
+  return [...new Set(value.map(id => text(id, label, 100)))];
+}
 export function saleInput(body: Record<string, unknown>) {
   if (!body || typeof body !== "object") throw new InvalidRecord("Solicitud inválida");
   if (!Object.values(CustomerType).includes(body.customerType as CustomerType)) throw new InvalidRecord("Tipo de cliente inválido");
-  return { ...common(body), requestedInvoiceDate: invoiceDate(body.invoiceDate), customerName: text(body.customerName, "Cliente"), customerType: body.customerType as CustomerType, saleDate: date(body.saleDate) };
+  const certificateKind = body.certificateKind ?? 'OPERATOR';
+  if (!Object.values(CertificateKind).includes(certificateKind as CertificateKind)) throw new InvalidRecord('Selecciona Operador o Inspección');
+  if (certificateKind === 'INSPECTION' && body.customerType !== 'COMPANY') throw new InvalidRecord('Los certificados de inspección corresponden siempre a una empresa');
+  const correlativeCode = body.customerType === 'COMPANY' ? body.correlativeCode : null;
+  if (body.customerType === 'COMPANY' && (typeof correlativeCode !== 'string' || !/^[0-9]{4}$/.test(correlativeCode))) throw new InvalidRecord('El correlativo de empresa debe tener exactamente 4 dígitos numéricos');
+  const courseIds = selectedIds(body.courseIds === undefined ? [body.courseId] : body.courseIds, 'Cursos');
+  return { ...common({...body, courseId:courseIds[0]}), courseIds, certificateKind: certificateKind as CertificateKind, correlativeCode: correlativeCode as string | null,
+    requestedInvoiceDate: invoiceDate(body.invoiceDate), customerName: text(body.customerName, "Cliente"), customerType: body.customerType as CustomerType, saleDate: date(body.saleDate) };
 }
 export function serviceDates(values: unknown): Date[] {
   if (!Array.isArray(values) || !values.length || values.length > 366) throw new InvalidRecord("Agrega entre 1 y 366 fechas al servicio");
@@ -45,9 +56,8 @@ export function serviceInput(body: Record<string, unknown>) {
   if (typeof body.correlativeCode !== "string" || !/^[0-9]{4}$/.test(body.correlativeCode)) throw new InvalidRecord("El código de correlativo debe tener exactamente 4 dígitos numéricos");
   const travelMode = body.travelMode ?? "NONE";
   if (!Object.values(TravelMode).includes(travelMode as TravelMode)) throw new InvalidRecord("Viáticos inválidos");
-  const rawCourses = body.courseIds === undefined ? [body.courseId] : body.courseIds;
-  if (!Array.isArray(rawCourses) || !rawCourses.length || rawCourses.length > 100) throw new InvalidRecord("Selecciona entre 1 y 100 cursos del catálogo");
-  const courseIds = [...new Set(rawCourses.map(id => text(id, "Curso", 100)))];
+  const courseIds = selectedIds(body.courseIds === undefined ? [body.courseId] : body.courseIds, 'Cursos');
+  const instructorIds = selectedIds(body.instructorIds === undefined ? (body.instructorId ? [body.instructorId] : []) : body.instructorIds, 'Instructores', true);
   const modality = body.modality || null;
   if (modality !== null && !Object.values(ClassModality).includes(modality as ClassModality)) throw new InvalidRecord("Modalidad inválida");
   const rawSessions = body.sessions;
@@ -65,7 +75,7 @@ export function serviceInput(body: Record<string, unknown>) {
   });
   return { ...common({ ...body, courseId: courseIds[0] }), courseIds, company: text(body.company, "Cliente"), correlativeCode: body.correlativeCode,
     requestedInvoiceDate: invoiceDate(body.invoiceDate), travelMode: travelMode as TravelMode, serviceDate: dates[0], dates, sessions, modality: modality as ClassModality | null, certificatesOnly: body.certificatesOnly,
-    instructorId: body.instructorId == null || body.instructorId === "" ? null : text(body.instructorId, "Instructor", 100),
+    instructorIds, instructorId: instructorIds[0] ?? null,
     locationId: body.locationId == null || body.locationId === "" ? null : text(body.locationId, "Ubicación", 100) };
 }
 export function instructorInput(body: Record<string, unknown>) {

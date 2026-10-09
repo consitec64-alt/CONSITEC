@@ -23,7 +23,7 @@ export async function GET(req: Request) {
 
     const services = await prisma.service.findMany({
       where: agendaWhere(start, end),
-      include: { salesperson: true, course: true, courses: true, instructor: true, location: true, dates: { orderBy: { date: "asc" } } }
+      include: { salesperson: true, course: true, courses: true, instructor: true, instructors: true, location: true, dates: { orderBy: { date: "asc" } } }
     });
 
     const certificateSales = await prisma.certificateSale.findMany({
@@ -41,7 +41,7 @@ export async function GET(req: Request) {
     // Certificate-only agenda entries are scheduling copies; certificate revenue
     // is counted from company certificate sales, never from those copies.
     const [invoicedServices, invoicedCertificates] = await Promise.all([
-      prisma.service.findMany({ where: { deletedAt: null, status: "INVOICED", certificatesOnly: false, invoicedAt: { gte: start, lt: end } }, include: { salesperson: true, course: true, courses: true, instructor: true, location: true, dates: true } }),
+      prisma.service.findMany({ where: { deletedAt: null, status: "INVOICED", certificatesOnly: false, invoicedAt: { gte: start, lt: end } }, include: { salesperson: true, course: true, courses: true, instructor: true, instructors: true, location: true, dates: true } }),
       prisma.certificateSale.findMany({ where: { deletedAt: null, status: "INVOICED", customerType: "COMPANY", invoicedAt: { gte: start, lt: end } }, include: { salesperson: true } })
     ]);
     const invoiced = [...invoicedServices, ...invoicedCertificates];
@@ -80,9 +80,8 @@ export async function GET(req: Request) {
         byCourse[course.name] = (byCourse[course.name] ?? 0) + 1;
       }
 
-      if (s.instructor?.name) {
-        byInstructor[s.instructor.name] =
-          (byInstructor[s.instructor.name] ?? 0) + 1;
+      for (const instructor of s.instructors.length ? s.instructors : s.instructor ? [s.instructor] : []) {
+        byInstructor[instructor.name] = (byInstructor[instructor.name] ?? 0) + 1;
       }
 
       if (!weeklyMatrix[rep]) {

@@ -22,17 +22,17 @@ export async function GET(req: Request) {
     if (modality && modality !== 'VIRTUAL' && modality !== 'IN_PERSON' && modality !== 'MIXED') throw new InvalidRecord('Modalidad inválida');
     const services = await prisma.service.findMany({
       where: { AND: [agendaWhere(start, end), ...(courseId ? [{ OR: [{ courseId }, { courses: { some: { id: courseId } } }] }] : [])], certificatesOnly: false,
-        ...(instructorId ? { instructorId } : {}), ...(company ? { company: { contains: company, mode: 'insensitive' } } : {}), ...(modality ? { modality: { in: modality === 'MIXED' ? ['MIXED'] : [modality as 'VIRTUAL' | 'IN_PERSON', 'MIXED'] } } : {}) },
+        ...(instructorId ? { OR:[{instructorId},{instructors:{some:{id:instructorId}}}] } : {}), ...(company ? { company: { contains: company, mode: 'insensitive' } } : {}), ...(modality ? { modality: { in: modality === 'MIXED' ? ['MIXED'] : [modality as 'VIRTUAL' | 'IN_PERSON', 'MIXED'] } } : {}) },
       include: serviceInclude, orderBy: [{ serviceDate: 'asc' }, { id: 'asc' }]
     });
-    const rows = services.flatMap(s => (s.dates.length ? s.dates : [{ date: s.serviceDate, startTime: null, endTime: null, modality: null }]).filter(d => d.date >= start && d.date < end && (!modality || modality === 'MIXED' || dayModality(s.modality, d.modality) === modality)).map(d => ({
-      id: `${s.id}:${d.date.toISOString().slice(0, 10)}`, date: d.date.toISOString().slice(0, 10),
-      instructor: s.instructor?.name || 'Sin asignar', company: s.company,
+    const rows = services.flatMap(s => (s.dates.length ? s.dates : [{ date: s.serviceDate, startTime: null, endTime: null, modality: null }]).filter(d => d.date >= start && d.date < end && (!modality || modality === 'MIXED' || dayModality(s.modality, d.modality) === modality)).flatMap(d => (s.instructors.length ? s.instructors : s.instructor ? [s.instructor] : [{id:"unassigned",name:"Sin asignar"}]).filter(i=>!instructorId||i.id===instructorId).map(instructor => ({
+      id: `${s.id}:${d.date.toISOString().slice(0, 10)}:${instructor.id}`, date: d.date.toISOString().slice(0, 10),
+      instructor: instructor.name, company: s.company,
       courses: (s.courses.length ? s.courses : [s.course]).map(c => c.name),
       modality: modalityLabel(dayModality(s.modality, d.modality)),
       location: dayModality(s.modality, d.modality) === 'VIRTUAL' ? 'Virtual' : s.location ? `${s.location.department} / ${s.location.district}` : 'Sin registrar',
       instructionalMinutes: d.startTime && d.endTime ? classHours(d.startTime, d.endTime)?.instructionalMinutes ?? null : null
-    }))).sort((a, b) => a.date.localeCompare(b.date) || a.instructor.localeCompare(b.instructor, 'es') || a.company.localeCompare(b.company, 'es') || a.id.localeCompare(b.id));
+    })))).sort((a, b) => a.date.localeCompare(b.date) || a.instructor.localeCompare(b.instructor, 'es') || a.company.localeCompare(b.company, 'es') || a.id.localeCompare(b.id));
     return NextResponse.json({ rows }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) { return recordError(error); }
 }
