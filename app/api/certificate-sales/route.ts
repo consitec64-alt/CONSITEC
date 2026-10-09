@@ -8,7 +8,7 @@ import { assignedSalesperson } from "@/lib/assigned-salesperson";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { invoiceDateFor } from "@/lib/invoice-date";
-import { saleInput, serviceInput } from "@/lib/record-input";
+import { saleInput, InvalidRecord } from "@/lib/record-input";
 import { recordError } from "@/lib/record-error";
 
 // ✅ GET (para dashboard)
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
         saleDate: { gte: start, lt: end },
       },
       include: {
-        course: true,
+        course: true, courses: { orderBy: { name: "asc" } },
         salesperson: true,
       },
       orderBy: { saleDate: "desc" },
@@ -47,23 +47,21 @@ export async function POST(req: Request) {
     const actor = await currentUser();
     if (!actor) return NextResponse.json({ error: "Debes iniciar sesión" }, { status: 401 });
     const body = await req.json();
-    const { requestedInvoiceDate, ...data } = saleInput(body);
-    // Create the agenda copy atomically, so retries cannot leave a half-saved sale.
-    const scheduled = data.amount.greaterThan(700) ? serviceInput({
-      ...data, amount: data.amount.toString(), company: data.customerName, certificatesOnly: true, instructorId: null,
-      locationId: null, serviceDate: data.saleDate.toISOString(), status: "SCHEDULED",
-      correlativeCode: body.correlativeCode
-    }) : null;
+    const { requestedInvoiceDate, courseIds, ...data } = saleInput(body);
     const created = await prisma.$transaction(async tx => {
       const invoicedAt = invoiceDateFor(data.status, requestedInvoiceDate);
       await assertMonthsOpen(tx, {...data,invoicedAt});
-      const duplicates = await saleDuplicates(tx, data.customerName, data.courseId, data.saleDate);
+      const duplicates = await saleDuplicates(tx, data.customerName, courseIds, data.saleDate);
       if (duplicates.length && body.allowDuplicate !== true) throw new PossibleDuplicate(duplicates);
       const salespersonId = await assignedSalesperson(tx, actor?.id);
-      const sale = await tx.certificateSale.create({ data: { ...data, salespersonId, invoicedAt } });
-      if (scheduled) {
-        const { dates: _dates, sessions, courseIds, requestedInvoiceDate: _invoice, ...service } = scheduled;
-        const copy = await tx.service.create({ data: { ...service, salespersonId, courses: { connect: courseIds.map(id => ({ id })) }, dates: { create: sessions } }, include: { courses: true, dates: true } });
+      if (await tx.course.count({where:{id:{in:courseIds}}}) !== courseIds.length) throw new InvalidRecord('Uno de los cursos seleccionados ya no existe');
+      const sale = await tx.certificateSale.create({ data: { ...data, salespersonId, invoicedAt, courses:{connect:courseIds.map(id=>({id}))} }, include:{course:true,courses:true,salesperson:true} });
+      if (data.amount.greaterThan(700)) {
+        const copy = await tx.service.create({ data: {
+          company:data.customerName, amount:data.amount, serviceDate:data.saleDate, status:'SCHEDULED', certificatesOnly:true,
+          correlativeCode:data.correlativeCode, courseId:data.courseId, salespersonId,
+          courses:{connect:courseIds.map(id=>({id}))}, dates:{create:{date:data.saleDate}}
+        }, include:{courses:true,dates:true} });
         await audit(tx, actor, "SERVICE", "CREATE", null, copy);
       }
       await audit(tx, actor, "CERTIFICATE", "CREATE", null, sale);

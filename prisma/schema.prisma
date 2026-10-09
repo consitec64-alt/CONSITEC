@@ -41,6 +41,11 @@ enum ClassModality {
   MIXED
 }
 
+enum CertificateKind {
+  OPERATOR
+  INSPECTION
+}
+
 enum TravelMode {
   NONE
   PLANE
@@ -61,6 +66,7 @@ model Instructor {
   id       String    @id @default(cuid())
   name     String    @unique
   services Service[]
+  groupedServices Service[] @relation("ServiceInstructors")
 }
 
 model Course {
@@ -71,6 +77,7 @@ model Course {
   certificateSales CertificateSale[]
   instructors      Instructor[] @relation("InstructorCourses")
   groupedServices  Service[] @relation("ServiceCourses")
+  groupedCertificateSales CertificateSale[] @relation("CertificateCourses")
 }
 
 model Salesperson {
@@ -117,6 +124,7 @@ model Service {
 
   course        Course      @relation(fields: [courseId], references: [id])
   courses       Course[] @relation("ServiceCourses")
+  instructors   Instructor[] @relation("ServiceInstructors")
   instructor    Instructor? @relation(fields: [instructorId], references: [id], onDelete: SetNull)
   location      Location?   @relation(fields: [locationId], references: [id])
   salesperson   Salesperson @relation(fields: [salespersonId], references: [id])
@@ -131,6 +139,8 @@ model CertificateSale {
   id            String        @id @default(cuid())
   customerName  String
   customerType  CustomerType
+  certificateKind CertificateKind @default(OPERATOR)
+  correlativeCode String?
   amount        Decimal       @db.Decimal(10, 2)
   saleDate      DateTime
   status        ServiceStatus @default(SCHEDULED)
@@ -140,6 +150,7 @@ model CertificateSale {
   courseId      String
   salespersonId String
 
+  courses       Course[] @relation("CertificateCourses")
   course        Course       @relation(fields: [courseId], references: [id])
   salesperson   Salesperson  @relation(fields: [salespersonId], references: [id])
 

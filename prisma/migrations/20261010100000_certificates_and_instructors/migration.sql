@@ -1,0 +1,18 @@
+BEGIN;
+CREATE TYPE "CertificateKind" AS ENUM ('OPERATOR', 'INSPECTION');
+ALTER TABLE "CertificateSale" ADD COLUMN "certificateKind" "CertificateKind" NOT NULL DEFAULT 'OPERATOR', ADD COLUMN "correlativeCode" TEXT;
+ALTER TABLE "CertificateSale" ADD CONSTRAINT "CertificateSale_inspection_company_check" CHECK ("certificateKind" <> 'INSPECTION' OR "customerType" = 'COMPANY');
+ALTER TABLE "CertificateSale" ADD CONSTRAINT "CertificateSale_correlative_check" CHECK ("correlativeCode" IS NULL OR ("customerType" = 'COMPANY' AND "correlativeCode" ~ '^[0-9]{4}$'));
+CREATE TABLE "_CertificateCourses" ("A" TEXT NOT NULL, "B" TEXT NOT NULL);
+CREATE UNIQUE INDEX "_CertificateCourses_AB_unique" ON "_CertificateCourses"("A", "B");
+CREATE INDEX "_CertificateCourses_B_index" ON "_CertificateCourses"("B");
+ALTER TABLE "_CertificateCourses" ADD CONSTRAINT "_CertificateCourses_A_fkey" FOREIGN KEY ("A") REFERENCES "CertificateSale"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "_CertificateCourses" ADD CONSTRAINT "_CertificateCourses_B_fkey" FOREIGN KEY ("B") REFERENCES "Course"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+INSERT INTO "_CertificateCourses" ("A", "B") SELECT "id", "courseId" FROM "CertificateSale";
+CREATE TABLE "_ServiceInstructors" ("A" TEXT NOT NULL, "B" TEXT NOT NULL);
+CREATE UNIQUE INDEX "_ServiceInstructors_AB_unique" ON "_ServiceInstructors"("A", "B");
+CREATE INDEX "_ServiceInstructors_B_index" ON "_ServiceInstructors"("B");
+ALTER TABLE "_ServiceInstructors" ADD CONSTRAINT "_ServiceInstructors_A_fkey" FOREIGN KEY ("A") REFERENCES "Instructor"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "_ServiceInstructors" ADD CONSTRAINT "_ServiceInstructors_B_fkey" FOREIGN KEY ("B") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+INSERT INTO "_ServiceInstructors" ("A", "B") SELECT "instructorId", "id" FROM "Service" WHERE "instructorId" IS NOT NULL;
+COMMIT;
