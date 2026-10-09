@@ -1,3 +1,4 @@
+import { syncCertificateAgenda } from "@/lib/certificate-agenda";
 import { cleanupQuotationFiles } from '@/lib/quotation-file-cleanup';
 import { assertMonthsOpen } from '@/lib/monthly-close';
 import { Prisma } from '@prisma/client';
@@ -18,6 +19,7 @@ export async function trashRecord(entity: string, id: string, actor: Actor) {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))::text`;
     if (entity === 'SERVICE') {
       const before = await tx.service.findUniqueOrThrow({ where: { id, deletedAt: null }, include: serviceInclude });
+      if(before.certificateSaleId)throw new InvalidRecord('Gestiona este registro desde Venta de certificados');
       await assertMonthsOpen(tx,before);
       const after = await tx.service.update({ where: { id, deletedAt: null }, data: { deletedAt: new Date() }, include: serviceInclude });
       await audit(tx, actor, entity, 'TRASH', before, after);
@@ -25,6 +27,7 @@ export async function trashRecord(entity: string, id: string, actor: Actor) {
       const before = await tx.certificateSale.findUniqueOrThrow({ where: { id, deletedAt: null }, include: { course: true, courses: true, salesperson: true } });
       await assertMonthsOpen(tx,before);
       const after = await tx.certificateSale.update({ where: { id, deletedAt: null }, data: { deletedAt: new Date() }, include: { course: true, courses: true, salesperson: true } });
+      await syncCertificateAgenda(tx,after,(after.courses.length?after.courses:[after.course]).map(c=>c.id),actor);
       await audit(tx, actor, entity, 'TRASH', before, after);
     }
   });
@@ -37,6 +40,7 @@ export async function restoreRecord(entity: string, id: string, actor: Actor) {
     const where = { id, ...owner, deletedAt: { gt: expiredBefore() } };
     if (entity === 'SERVICE') {
       const before = await tx.service.findFirstOrThrow({ where, include: serviceInclude });
+      if(before.certificateSaleId)throw new InvalidRecord('Recupera primero la venta de certificados vinculada');
       await assertMonthsOpen(tx,before);
       const instructorIds = [...new Set([before.instructorId,...before.instructors.map(i=>i.id)].filter((id):id is string=>!!id))];
       await assertInstructorsAvailable(tx, instructorIds, before.dates.length ? before.dates.map(d=>d.date) : [before.serviceDate], id);
@@ -46,6 +50,7 @@ export async function restoreRecord(entity: string, id: string, actor: Actor) {
     const before = await tx.certificateSale.findFirstOrThrow({ where, include: { course: true, courses: true, salesperson: true } });
     await assertMonthsOpen(tx,before);
     const after = await tx.certificateSale.update({ where: { id }, data: { deletedAt: null }, include: { course: true, courses: true, salesperson: true } });
+    await syncCertificateAgenda(tx,after,(after.courses.length?after.courses:[after.course]).map(c=>c.id),actor);
     await audit(tx, actor, entity, 'RESTORE', before, after); return after;
   });
 }

@@ -3,7 +3,7 @@ import { jwtVerify } from "jose/jwt/verify";
 
 export const SESSION_COOKIE = "consitec_session";
 export const SESSION_SECONDS = 60 * 60 * 8;
-export type Session = { userId: string; username: string; role: "ADMIN" | "SALES" };
+export type Session = { userId: string; username: string; role: "ADMIN" | "SALES" | "SUPERVISOR"; sessionVersion?: number };
 
 function signingKey() {
   const secret = process.env.AUTH_SECRET;
@@ -14,7 +14,7 @@ function signingKey() {
 }
 
 export async function encodeSession(session: Session) {
-  return new SignJWT({ username: session.username, role: session.role })
+  return new SignJWT({ username: session.username, role: session.role, sessionVersion: session.sessionVersion ?? 0 })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(session.userId)
     .setIssuer("consitec")
@@ -31,8 +31,8 @@ export async function getSession(token?: string): Promise<Session | null> {
       algorithms: ["HS256"], issuer: "consitec", audience: "consitec-panel"
     });
     if (!payload.sub || typeof payload.username !== "string" ||
-        !["ADMIN", "SALES"].includes(String(payload.role))) return null;
-    return { userId: payload.sub, username: payload.username, role: payload.role as Session["role"] };
+        !["ADMIN", "SALES", "SUPERVISOR"].includes(String(payload.role))) return null;
+    return { userId: payload.sub, username: payload.username, role: payload.role as Session["role"], sessionVersion: typeof payload.sessionVersion === "number" ? payload.sessionVersion : 0 };
   } catch {
     return null;
   }

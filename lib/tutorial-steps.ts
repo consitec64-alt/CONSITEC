@@ -1,10 +1,28 @@
-export type TutorialStep = { tab: string; target: string; title: string; text: string; form?: "service" | "sale"; admin?: boolean; detail?: boolean; confirmation?: boolean; preview?: "duplicate" | "monthly-close" };
+export type TutorialStep = { tab: string; target: string; title: string; text: string; form?: "service" | "sale"; admin?: boolean; detail?: boolean; confirmation?: boolean; preview?: "duplicate" | "monthly-close" | "profile" };
 const field = (name: string) => `.modal-overlay [name="${name}"]`;
 const step = (tab: string, target: string, title: string, text: string, extra: Partial<TutorialStep> = {}): TutorialStep => ({ tab, target, title, text, ...extra });
 const service = (target: string, title: string, text: string) => step("services", target, title, text, { form: "service" });
 const sale = (target: string, title: string, text: string) => step("certificates", target, title, text, { form: "sale" });
 const instructor = (target: string, title: string, text: string) => step("support", `.instructor-card > .instructor-details:last-child ${target}`, title, text, { detail: true });
-export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
+export function tutorialSteps(isAdmin: boolean, isSupervisor=false): TutorialStep[] {
+  if(isSupervisor)return [
+    step("summary",".workspace-banner","Tu acceso de supervisor","Puedes consultar todo el equipo, sus ventas, cotizaciones, rendimiento e historial. No puedes crear, editar, eliminar, recuperar registros ni gestionar usuarios o cierres."),
+    step("services",".content-area","Agenda del equipo","Consulta cada fecha, instructor, curso, modalidad y estado. Usa los filtros para encontrar los servicios."),
+    step("quotations",".quotations-panel","Cotizaciones del equipo","Filtra por comercial y estado. Abre una ficha para consultar detalles y descargar sus PDF; los datos están en modo consulta."),
+    step("certificates",".sale-summary","Certificados y facturación","Todos los certificados suman a este total. Solo empresas con importe mayor a S/700 y estado Facturado suman a facturación. Personas naturales usan Pendiente y Pagado."),
+    step("performance",".monthly-summary","Rendimiento comercial","Consulta rangos de fechas, ranking, totales facturados y resumen mensual de cada comercial."),
+    step("instructors",".instructor-register","Registro de instructores","Consulta clases por instructor y fecha; puedes exportar el registro a Excel."),
+    step("support",".support-grid","Fichas de soporte","Consulta instructores, cursos, ubicaciones, EMO y SCTR. La edición de catálogos no está disponible para supervisores."),
+    step("history",".history-panel","Historial del equipo","Consulta los cambios de todo el equipo, su autor y fecha."),
+    step("trash",".trash-panel","Papelera en consulta","Revisa los registros recuperables y su vencimiento. Un administrador o vendedor autorizado debe restaurarlos."),
+    step("summary",'[data-tour="profile"]',"Foto y tamaño de texto","Abre Mi perfil para subir o quitar tu foto, elegir texto Normal, Grande o Muy grande y cambiar tu contraseña. Tus preferencias se guardan en tu cuenta."),
+    step("summary",'.profile-dialog [name="profilePhoto"]',"Tu foto de perfil","Selecciona PNG, JPEG o WebP de hasta 5 MB. La foto se ajusta a un cuadrado y se muestra en tu perfil y barra lateral. Puedes quitarla.",{preview:"profile"}),
+    step("summary",'.profile-dialog [name="textSize"]',"Texto a tu medida","Elige Normal, Grande o Muy grande. Guarda tus preferencias para aplicar el tamaño a todas las herramientas y conservarlo al volver a entrar.",{preview:"profile"}),
+    step("summary",'.profile-dialog [name="profilePhoto"]',"Tu foto de perfil","Elige una foto PNG, JPEG o WebP de hasta 5 MB.",{preview:"profile"}),
+    step("summary",'.profile-dialog [name="textSize"]',"Tamaño de texto","Elige Normal, Grande o Muy grande y guarda tus preferencias.",{preview:"profile"}),
+    step("summary",'[data-tour="refresh"]',"Actualizar","Consulta los cambios recientes del equipo."),
+    step("summary",".theme-toggle","Tema claro y oscuro","Elige el tema que prefieras."),
+    step("summary",'[data-tour="replay"]',"Repetir el tutorial","Puedes repetir esta guía en cualquier momento.")];
   const items = [
     step("summary", "nav", "Tu espacio de trabajo", "Al iniciar sesión, la bienvenida muestra el comercial asignado a tu cuenta y abre el panel automáticamente; también puedes pulsar Entrar al panel. Los iconos del menú abren cada apartado. El tutorial irá mostrando las vistas y sus controles. Los formularios se abren como demostración: este recorrido no guarda ventas ni modifica datos."),
     step("summary", ".overview-banner", "Accesos rápidos", "Registrar servicio y Vender certificados abren directamente sus formularios. Las secciones numeradas separan cliente, cursos, programación e importe.") ,
@@ -25,7 +43,8 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     service('.modal-overlay [name="sessionModality"]', "Modalidad por fecha", "Con Virtual / Presencial, elige Virtual o Presencial para cada jornada. Las fechas nuevas requieren su propia selección. Cambiar a una modalidad única aplica esa modalidad a todas las fechas; el precio sigue siendo único."),
     service(".modal-overlay .service-dates > button", "Agregar otra fecha", "Este botón incorpora otra jornada al mismo servicio. El importe sigue siendo único para el conjunto de fechas."),
     service(".modal-overlay .class-session-fields > button", "Quitar una fecha", "La papelera retira esa jornada del formulario. Se deshabilita cuando queda una sola fecha, porque todo servicio necesita al menos una."),
-    service(field("startTime"), "Hora de inicio", "Ingresa la hora en formato de 24 horas, por ejemplo 09:00. Cada fecha tiene su propio horario."),
+    service(field("startTime"), "Hora de inicio", "Pulsa el reloj para elegir hora y minutos en formato de 24 horas, por ejemplo 09:00. También puedes escribir la hora. Cada fecha tiene su propio horario."),
+    service(".modal-overlay .clock-options", "Selector de horas", "El reloj abre selectores de hora (00 a 23) y minutos (00 a 59). Elige ambos y pulsa Listo; cada fecha tiene sus propios valores."),
     service(field("endTime"), "Hora de fin y descanso", "La hora de fin debe ser posterior al inicio dentro del mismo día. Si transcurren más de cinco horas, se descuenta una hora de descanso: 09:00–15:00 cuenta como cinco horas de clase."),
     service(".modal-overlay .instructor-picker", "Uno o varios instructores", "Despliega el catálogo, busca por nombre y elige uno o varios instructores para todas las fechas del servicio. Las etiquetas permiten quitar selecciones. Se comprueba la disponibilidad de cada instructor; uno ocupado aparece como no disponible. Puedes dejarlo sin asignar."),
     service(field("invoiceDate"), "Fecha de facturación", "Al pasar a Facturado, el importe suma en este mes, aunque las clases hayan ocurrido en otro. Si dejas la fecha vacía al facturar, se usa la fecha actual."),
@@ -62,15 +81,15 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     step("certificates", ".page-heading > button", "Nueva venta", "Abre el formulario de certificados. Ahora mostraremos sus campos sin crear una venta."),
     sale(field("certificateKind"), "Operador o inspección", "Selecciona el tipo de certificado. Inspección establece Empresa y bloquea Persona natural; Operador permite ambos tipos de cliente."),
     sale(field("customerName"), "Nombre del cliente", "Escribe el nombre de la persona o la razón social de la empresa que compra los certificados."),
-    sale(field("customerType"), "Tipo de cliente", "Elige Persona natural o Empresa. Únicamente certificados de empresas facturados cuentan para la meta mensual de facturación."),
+    sale(field("customerType"), "Tipo de cliente", "Elige Persona natural o Empresa. Únicamente certificados de empresas mayores a S/700 en estado Facturado cuentan para la meta mensual de facturación."),
     sale(field("correlativeCode"), "Correlativo de empresa", "Aparece al elegir Empresa, con cualquier importe, tanto al crear como al editar. Es obligatorio y tiene cuatro dígitos numéricos. Personas naturales no usan correlativo. Aquí mostramos el formulario de empresa como ejemplo."),
     sale(".modal-overlay .course-picker", "Cursos del certificado", "Elige uno o varios cursos del catálogo. Puedes buscarlos por nombre y quitar las etiquetas seleccionadas. Todos comparten el importe total de la venta."),
     sale(".modal-overlay .assigned-commercial", "Comercial asignado", "La venta queda a nombre del comercial asociado a tu cuenta. Si está Sin asignar, un administrador debe completar la asignación en Usuarios."),
     sale(field("saleDate"), "Fecha de venta", "Indica cuándo se realizó la venta. Esta fecha determina en qué mes aparece la venta registrada."),
     sale(field("invoiceDate"), "Fecha de facturación del certificado", "La fecha de facturación determina el mes del total facturado; no necesariamente coincide con la fecha de venta. Al facturar con este campo vacío, se usa hoy."),
-    sale(field("amount"), "Importe y copia en agenda", "Ingresa el importe total en soles para todos los cursos. Las nuevas ventas mayores a S/700 también se agregan a la agenda. La copia no duplica el total facturado."),
-    sale(field("status"), "Estado de la venta", "Selecciona Programado, Ejecutado o Facturado. Cambiar el estado a Facturado activa el cómputo de facturación cuando el cliente es una empresa."),
-    sale(".modal-overlay .dialog-actions", "Guardar o cancelar la venta", "Guarda cuando los datos estén completos. Para corregir una venta existente, usa el lápiz y Guarda cambios. La agenda se edita por separado. El tutorial cierra esta demostración sin guardar."),
+    sale(field("amount"), "Importe y copia en agenda", "Ingresa el importe total en soles para todos los cursos. Las ventas de empresa mayores a S/700 se sincronizan con la agenda. Al editar se actualiza la copia; con S/700 o menos se retira. Personas naturales solo suman a certificados."),
+    sale(field("status"), "Estado de la venta", "Persona natural: Pendiente o Pagado, sin facturación. Empresa: Pendiente o Facturado. Solo empresas mayores a S/700 en Facturado suman a facturación; todas las ventas suman a certificados."),
+    sale(".modal-overlay .dialog-actions", "Guardar o cancelar la venta", "Guarda cuando los datos estén completos. Para corregir una venta existente, usa el lápiz y Guarda cambios. Los cambios se sincronizan con su copia vinculada en agenda. El tutorial cierra esta demostración sin guardar."),
     step("performance", ".commercial-weeks", "Semanas del mes", "Consulta las fechas de cada semana. El gráfico y el rendimiento usan los mismos períodos para todos; cada fecha de servicio cuenta en una sola semana."),
     step("performance", ".week-editor > summary", "Configurar semanas comerciales", "Solo administradores pueden configurar las semanas del mes seleccionado. Los rangos deben cubrir todos sus días, sin huecos ni solapamientos. Los meses cerrados requieren reapertura.", {admin:true}),
     step("performance", '.week-editor [name="weekStart"]', "Inicio de la semana", "Elige la primera fecha del período. La primera semana empieza el día 1 y cada siguiente semana empieza después de la anterior.", {admin:true}),
@@ -164,7 +183,11 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
   const [warning] = main.splice(duplicate,1);
   const deletion = main.findIndex(s=>s.confirmation);
   main.splice(deletion,0,warning);
-  return [...main,...items.filter(s=>common.has(s.title)),
+  return [...main,
+    ...(isAdmin?[step("users",'[data-tour="reset-password"], #existing-accounts',"Restablecer contraseñas","El administrador establece una contraseña temporal, la comunica en privado y el usuario debe cambiarla al ingresar. Se cierran sus sesiones anteriores; la contraseña original no se muestra.",{admin:true})]:[]),
+    ...items.filter(s=>common.has(s.title)),
+    step("summary",'[data-tour="profile"]',"Foto y tamaño de texto","Abre Mi perfil para subir o quitar tu foto, elegir texto Normal, Grande o Muy grande y cambiar tu contraseña. Se guarda en tu cuenta y se aplica a todas las herramientas."),
+
     step("summary", '[data-tour="refresh"]', "Actualizar", "Actualiza los datos y el estado del cierre mensual. Si otro usuario hizo cambios, este botón permite consultarlos sin cerrar tu sesión."),
     step("summary", ".theme-toggle", "Tema claro y oscuro", "El botón de sol o luna cambia el tema. Tu elección se conserva en este dispositivo."),
     step("summary", '[data-tour="replay"]', "Repetir el tutorial", "Puedes repetir el recorrido con Ver tutorial o el icono de ayuda en móvil. Finalizar u Omitir evita que se abra automáticamente. Tu avance se guarda en la cuenta.")];

@@ -9,7 +9,7 @@ import CompanyFooter from "@/components/company-footer";
 import ThemeToggle from "@/components/theme-toggle";
 import Brand from "@/components/brand";
 
-type User = { id: string; username: string; role: "ADMIN" | "SALES"; salespersonId: string | null; salesperson: { id: string; name: string } | null };
+type User = { id: string; username: string; role: "ADMIN" | "SALES" | "SUPERVISOR"; salespersonId: string | null; salesperson: { id: string; name: string } | null };
 async function request(url: string, options?: RequestInit) {
   const res = await fetch(url, options);
   if (res.status === 401) { window.location.assign("/login"); throw new Error("Inicia sesión nuevamente."); }
@@ -20,6 +20,8 @@ async function request(url: string, options?: RequestInit) {
 
 export default function UsersPanel() {
   const { start: startTutorial } = useTutorial();
+  const [role,setRole]=useState("SALES");
+  const [resetTarget,setResetTarget]=useState<User|null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [salespeople, setSalespeople] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +53,7 @@ export default function UsersPanel() {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values)
       });
       setUsers(previous => [...previous, user].sort((a, b) => a.username.localeCompare(b.username)));
-      form.reset(); setNotice(`Usuario ${user.username} creado. Ya puede iniciar sesión.`);
+      form.reset();setRole("SALES"); setNotice(`Usuario ${user.username} creado. Ya puede iniciar sesión.`);
     } catch (err) { setError(err instanceof Error ? err.message : "No se pudo crear el usuario."); }
     finally { setBusy(false); }
   }
@@ -80,6 +82,7 @@ export default function UsersPanel() {
     } catch (err) { setDeleteError(err instanceof Error ? err.message : "No se pudo eliminar la cuenta."); }
     finally { setBusy(false); }
   }
+  async function resetPassword(e:FormEvent<HTMLFormElement>){e.preventDefault();if(!resetTarget||busy)return;setBusy(true);setError("");const password=new FormData(e.currentTarget).get("password");try{await request(`/api/users/${resetTarget.id}/password`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password})});setNotice("Contraseña temporal guardada. Comunícala al usuario por un canal privado; deberá cambiarla al ingresar. Sus sesiones anteriores se cerraron.");setResetTarget(null);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
   return <main className="page-content users-page">
     <Link href="/dashboard" className="text-button">← Volver al panel</Link>
     <div className="page-heading"><div><div className="users-title"><h1>Usuarios</h1><button className="btn secondary" onClick={startTutorial}>Ver tutorial</button><ThemeToggle /></div><p>Crea cuentas y asigna el comercial de cada usuario.</p></div><Brand href="/dashboard" className="brand-compact" /></div>
@@ -90,22 +93,22 @@ export default function UsersPanel() {
       <form onSubmit={create} className="users-form">
         <label className="users-field">Correo electrónico<input name="email" type="email" autoComplete="off" autoCapitalize="none" required maxLength={254} placeholder="nombre@empresa.com" /><small>Será el correo para iniciar sesión.</small></label>
         <label className="users-field">Contraseña<input name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={72} /><small>Al menos 12 caracteres; máximo 72 bytes.</small></label>
-        <label className="users-field">Rol<select name="role" defaultValue="SALES"><option value="SALES">Vendedor</option><option value="ADMIN">Administrador</option></select></label>
-        <label className="users-field">Comercial asignado<select name="salespersonId" defaultValue="" required><option value="">Selecciona un comercial</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label>
-        <div className="users-form-footer"><p className="form-note">Los administradores pueden crear usuarios. Ambos roles tienen acceso a la operación comercial. Cada cuenta registra automáticamente las nuevas ventas a nombre de su comercial asignado.</p>
+        <label className="users-field">Rol<select name="role" value={role} onChange={e=>setRole(e.target.value)}><option value="SALES">Vendedor</option><option value="ADMIN">Administrador</option><option value="SUPERVISOR">Supervisor</option></select></label>
+        {role!=="SUPERVISOR"&&<label className="users-field">Comercial asignado<select name="salespersonId" defaultValue="" required><option value="">Selecciona un comercial</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label>}
+        <div className="users-form-footer"><p className="form-note">Los administradores pueden crear usuarios. El supervisor consulta todo el equipo y no necesita comercial asignado. Administradores y vendedores registran ventas con su comercial. Cada cuenta registra automáticamente las nuevas ventas a nombre de su comercial asignado.</p>
         <button className="btn" disabled={busy}>{busy ? "Creando…" : "Crear usuario"}</button></div>
       </form>
     </section>
     <section className="panel" id="existing-accounts"><div className="section-heading"><h2>Cuentas existentes</h2><button className="text-button" disabled={loading} onClick={() => { setError(""); void load().catch(err => setError(err.message)); }}>Actualizar</button></div>
       <p className="form-note">Asigna un correo a las cuentas existentes. Su contraseña se conserva; después del cambio deben ingresar con el correo nuevo. Verifica la dirección antes de guardar.</p>
       {loading ? <p role="status">Cargando usuarios…</p> : <ul className="user-account-list">{users.map(user => <li key={user.id} className="user-account">
-        <div className="user-identity"><strong>{user.username}</strong><span className="user-role">{user.role === "ADMIN" ? "Administrador" : "Vendedor"}</span>
-        <button type="button" className="user-delete-button" disabled={busy || user.id === currentId} title={user.id === currentId ? "No puedes eliminar tu propia cuenta" : undefined} onClick={() => { setDeleteError(""); setDeleteTarget(user); }} aria-label={`Eliminar cuenta de ${user.username}`}><Trash2 size={14} />Eliminar cuenta</button></div>
+        <div className="user-identity"><strong>{user.username}</strong><span className="user-role">{user.role === "ADMIN" ? "Administrador" : user.role === "SUPERVISOR" ? "Supervisor" : "Vendedor"}</span>
+        <button type="button" className="text-button" data-tour="reset-password" disabled={busy||user.id===currentId} onClick={()=>{setError("");setResetTarget(user);}}>Restablecer contraseña</button><button type="button" className="user-delete-button" disabled={busy || user.id === currentId} title={user.id === currentId ? "No puedes eliminar tu propia cuenta" : undefined} onClick={() => { setDeleteError(""); setDeleteTarget(user); }} aria-label={`Eliminar cuenta de ${user.username}`}><Trash2 size={14} />Eliminar cuenta</button></div>
         <form className="user-email-form" onSubmit={updateEmail}>
         <input type="hidden" name="id" value={user.id} />
         <label className="users-field">Correo de {user.username}<input name="email" type="email" autoComplete="off" autoCapitalize="none" required maxLength={254} defaultValue={user.username.includes("@") ? user.username : ""} placeholder="nombre@empresa.com" /></label>
         <button className="btn secondary" disabled={busy}>{busy ? "Guardando…" : "Guardar correo"}</button>
-      </form><form className="user-email-form" onSubmit={updateEmail}><input type="hidden" name="id" value={user.id} /><label className="users-field">Comercial de {user.username}<select name="salespersonId" defaultValue={user.salespersonId || ''} required><option value="">Sin asignar</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label><button className="btn secondary" disabled={busy}>Guardar comercial</button></form></li>)}</ul>}
+      </form>{user.role!=="SUPERVISOR"&&<form className="user-email-form" onSubmit={updateEmail}><input type="hidden" name="id" value={user.id} /><label className="users-field">Comercial de {user.username}<select name="salespersonId" defaultValue={user.salespersonId || ''} required><option value="">Sin asignar</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label><button className="btn secondary" disabled={busy}>Guardar comercial</button></form>}</li>)}</ul>}
     </section>
     {deleteTarget && <dialog ref={deleteDialog} className="dialog users-delete-dialog" aria-labelledby="delete-user-title" onCancel={e => { if (busy) e.preventDefault(); else setDeleteTarget(null); }}>
       <div className="section-heading"><h2 id="delete-user-title">Eliminar usuario</h2></div>
@@ -113,6 +116,7 @@ export default function UsersPanel() {
       {deleteError && <p className="error-banner" role="alert">{deleteError}</p>}
       <div className="dialog-actions"><button type="button" className="btn secondary" disabled={busy} onClick={() => { deleteDialog.current?.close(); setDeleteTarget(null); }}>Cancelar</button><button type="button" className="btn destructive" disabled={busy} onClick={() => void deleteUser()}>{busy ? "Eliminando…" : "Eliminar usuario"}</button></div>
     </dialog>}
+    {resetTarget&&<div className="modal-overlay"><div className="dialog" role="dialog" aria-modal="true" aria-label="Restablecer contraseña"><h2>Restablecer contraseña de {resetTarget.username}</h2><p>Define una contraseña temporal y entrégala por un canal privado. El usuario deberá cambiarla al entrar.</p><form onSubmit={resetPassword}><label>Contraseña temporal<input name="password" type="password" autoComplete="new-password" minLength={12} maxLength={72} required/></label>{error&&<p className="error-banner" role="alert">{error}</p>}<div className="dialog-actions"><button className="btn secondary" type="button" disabled={busy} onClick={()=>setResetTarget(null)}>Cancelar</button><button className="btn" disabled={busy}>Restablecer contraseña</button></div></form></div></div>}
     <CompanyFooter />
   </main>;
 }

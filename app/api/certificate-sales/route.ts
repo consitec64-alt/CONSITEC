@@ -1,3 +1,4 @@
+import { syncCertificateAgenda } from "@/lib/certificate-agenda";
 import { assertMonthsOpen } from '@/lib/monthly-close';
 export const dynamic = "force-dynamic";
 
@@ -56,14 +57,7 @@ export async function POST(req: Request) {
       const salespersonId = await assignedSalesperson(tx, actor?.id);
       if (await tx.course.count({where:{id:{in:courseIds}}}) !== courseIds.length) throw new InvalidRecord('Uno de los cursos seleccionados ya no existe');
       const sale = await tx.certificateSale.create({ data: { ...data, salespersonId, invoicedAt, courses:{connect:courseIds.map(id=>({id}))} }, include:{course:true,courses:true,salesperson:true} });
-      if (data.amount.greaterThan(700)) {
-        const copy = await tx.service.create({ data: {
-          company:data.customerName, amount:data.amount, serviceDate:data.saleDate, status:'SCHEDULED', certificatesOnly:true,
-          correlativeCode:data.correlativeCode, courseId:data.courseId, salespersonId,
-          courses:{connect:courseIds.map(id=>({id}))}, dates:{create:{date:data.saleDate}}
-        }, include:{courses:true,dates:true} });
-        await audit(tx, actor, "SERVICE", "CREATE", null, copy);
-      }
+      await syncCertificateAgenda(tx,sale,courseIds,actor);
       await audit(tx, actor, "CERTIFICATE", "CREATE", null, sale);
       return sale;
     });

@@ -8,16 +8,17 @@ const Context = createContext<Tour>({ active: null, start: () => {} });
 export const useTutorial = () => useContext(Context);
 export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter(), pathname = usePathname();
+  const [isSupervisor,setSupervisor]=useState(false);
   const [isAdmin, setAdmin] = useState(false), [index, setIndex] = useState<number | null>(null);
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
-  const items = useMemo(() => tutorialSteps(isAdmin), [isAdmin]);
+  const items = useMemo(() => tutorialSteps(isAdmin,isSupervisor), [isAdmin,isSupervisor]);
   const active = index === null ? null : items[index];
   const start = useCallback(() => { if (ready) { setError(""); setIndex(0); } }, [ready]);
   useEffect(() => {
     let cancelled = false;
     void fetch("/api/auth/me").then(async res => { if (!res.ok) return; const user = await res.json(); if (cancelled) return;
-      setAdmin(user.role === "ADMIN"); setReady(true);
-      if (!user.tutorialCompleted) setIndex(Math.min(user.tutorialStep, tutorialSteps(user.role === "ADMIN").length - 1));
+      setAdmin(user.role === "ADMIN");setSupervisor(user.role === "SUPERVISOR"); setReady(true);
+      if (!user.mustChangePassword && !user.tutorialCompleted) setIndex(Math.min(user.tutorialStep, tutorialSteps(user.role === "ADMIN",user.role === "SUPERVISOR").length - 1));
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);

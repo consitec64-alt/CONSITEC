@@ -21,16 +21,20 @@ export async function middleware(req: NextRequest) {
   let user = null;
   if (session) {
     try {
-      user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true } });
+      user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, role:true, mustChangePassword:true, sessionVersion:true } });
     } catch {
       return NextResponse.json({ error: "Servicio temporalmente no disponible" }, { status: 503 });
     }
   }
+  if (user && user.sessionVersion !== (session?.sessionVersion ?? 0)) user=null;
   if (!user) {
     return isApi
       ? NextResponse.json({ error: "Debes iniciar sesión" }, { status: 401 })
       : NextResponse.redirect(new URL("/login", req.url));
   }
+  const personal = ["/api/auth/logout","/api/auth/tutorial","/api/profile"].includes(req.nextUrl.pathname);
+  if (isApi && user.mustChangePassword && !personal && req.nextUrl.pathname!=="/api/auth/me") return NextResponse.json({error:"Cambia tu contraseña temporal para continuar",code:"PASSWORD_CHANGE_REQUIRED"},{status:403});
+  if (isApi && user.role === "SUPERVISOR" && !["GET","HEAD","OPTIONS"].includes(req.method) && !personal) return NextResponse.json({error:"El supervisor tiene acceso de consulta"},{status:403});
   const response = NextResponse.next();
   if (isApi) response.headers.set("Cache-Control", "private, no-store");
   return response;

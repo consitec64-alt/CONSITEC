@@ -7,8 +7,8 @@ El panel conserva su navegación y su identidad azul y naranja. La vista general
 - Tipo **Operador** (persona natural o empresa) o **Inspección** (solo empresa). Inspección selecciona Empresa y bloquea Persona natural; el servidor también valida la regla.
 - Empresa activa un correlativo obligatorio de cuatro dígitos, independientemente del importe, al crear y editar. Personas naturales no guardan correlativo.
 - Uno o varios cursos del catálogo comparten un único importe. La tabla muestra todos los cursos, el tipo de certificado y el correlativo; la búsqueda encuentra cursos adicionales.
-- Las ventas nuevas mayores a S/700 mantienen una copia en agenda con todos sus cursos y un único importe. Personas naturales no necesitan correlativo para esta copia. Editar la venta no crea copias nuevas; la agenda se edita por separado.
-- Solo certificados de empresas facturados cuentan para los totales facturados. Ni los cursos adicionales ni las copias en agenda duplican el ingreso.
+- Las ventas de empresa mayores a S/700 mantienen una copia vinculada en agenda con todos sus cursos y un único importe. Editar la venta sincroniza la copia; bajar a S/700 o menos o cambiar a persona natural la retira.
+- Solo certificados de empresas mayores a S/700 en estado Facturado cuentan para los totales facturados. Todas las ventas suman al total de certificados. Ni los cursos adicionales ni las copias en agenda duplican el ingreso.
 
 ## Servicios
 
@@ -33,3 +33,5 @@ Validación local: `SMOKE_BASE_URL=http://127.0.0.1:3065 node --env-file=.env sc
 Vista general, agenda, cotizaciones, certificados, rendimiento, instructores, soporte, historial, papelera y usuarios comparten una cabecera de marca. Cada una tiene mensaje, icono, acento de color y accesos que abren formularios, llevan a otras vistas o enfocan los controles correspondientes. Los accesos de semanas distinguen administradores y vendedores; Usuarios permanece exclusivo de administración. Las cabeceras se adaptan a móvil y modo oscuro.
 
 Los períodos de cabecera corresponden al mes seleccionado cuando aplica. Cotizaciones indica que reúne todos los meses; soporte identifica sus catálogos compartidos. El tutorial muestra los accesos de cada herramienta sin repetir las instrucciones genéricas de búsqueda o eliminación.
+
+Consulta [Certificados, Supervisor y preferencias personales](CERTIFICADOS_Y_PERFILES.md) para estados, sincronización, perfil y recuperación de acceso.

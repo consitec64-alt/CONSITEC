@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     if (!user || !isHash || !valid) {
       return NextResponse.json({ error: "Usuario o contraseña incorrectos" }, { status: 401 });
     }
-    const token = await encodeSession({ userId: user.id, username: user.username, role: user.role });
+    const token = await encodeSession({ userId: user.id, username: user.username, role: user.role, sessionVersion:user.sessionVersion });
     const res = NextResponse.json({ success: true });
     res.headers.set("Cache-Control", "no-store");
     res.cookies.set(SESSION_COOKIE, token, {

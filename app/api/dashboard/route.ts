@@ -42,7 +42,7 @@ export async function GET(req: Request) {
     // is counted from company certificate sales, never from those copies.
     const [invoicedServices, invoicedCertificates] = await Promise.all([
       prisma.service.findMany({ where: { deletedAt: null, status: "INVOICED", certificatesOnly: false, invoicedAt: { gte: start, lt: end } }, include: { salesperson: true, course: true, courses: true, instructor: true, instructors: true, location: true, dates: true } }),
-      prisma.certificateSale.findMany({ where: { deletedAt: null, status: "INVOICED", customerType: "COMPANY", invoicedAt: { gte: start, lt: end } }, include: { salesperson: true } })
+      prisma.certificateSale.findMany({ where: { deletedAt: null, status: "INVOICED", customerType: "COMPANY", amount: { gt: 700 }, invoicedAt: { gte: start, lt: end } }, include: { salesperson: true } })
     ]);
     const invoiced = [...invoicedServices, ...invoicedCertificates];
     const monthlyServices = [...new Map([...services, ...invoicedServices].map(s => [s.id, s])).values()];

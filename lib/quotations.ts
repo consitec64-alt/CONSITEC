@@ -10,10 +10,10 @@ export class QuotationError extends Error { constructor(message: string, public 
 export async function quotationActor() {
  const actor = await currentUser();
  if (!actor) throw new QuotationError('Debes iniciar sesión', 401);
- if (!['ADMIN','SALES'].includes(actor.role)) throw new QuotationError('Acceso comercial requerido',403);
+ if (!['ADMIN','SALES','SUPERVISOR'].includes(actor.role)) throw new QuotationError('Acceso comercial requerido',403);
  return actor;
 }
-export function quotationOwner(actor: {role:string;salespersonId:string|null}) { return actor.role === 'ADMIN' ? {} : { salespersonId: actor.salespersonId || '__unassigned__' }; }
+export function quotationOwner(actor: {role:string;salespersonId:string|null}) { return actor.role !== 'SALES' ? {} : { salespersonId: actor.salespersonId || '__unassigned__' }; }
 export function quotationError(e: unknown) { return e instanceof QuotationError ? NextResponse.json({error:e.message},{status:e.status}) : recordError(e); }
 export function quotationInput(body: Record<string,unknown>) {
  const text = (key:string,max:number,required=false) => { const val=body[key]??''; if(typeof val!=='string'||val.length>max||(required&&!val.trim()))throw new InvalidRecord(`Revisa ${key}`);return val.trim(); };
