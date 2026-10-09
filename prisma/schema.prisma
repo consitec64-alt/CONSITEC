@@ -38,6 +38,7 @@ model User {
 enum ClassModality {
   VIRTUAL
   IN_PERSON
+  MIXED
 }
 
 enum TravelMode {
@@ -147,6 +148,7 @@ model CertificateSale {
 }
 
 model ServiceDay {
+  modality  ClassModality?
   id        String @id @default(cuid())
   date      DateTime
   startTime String?

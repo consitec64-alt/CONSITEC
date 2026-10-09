@@ -22,3 +22,5 @@ La carga necesita `BLOB_READ_WRITE_TOKEN` de un almacén **privado** de Vercel B
 La carga viaja directamente al almacén con un permiso limitado a una ruta, tipo PDF, tamaño y tres minutos. El servidor valida tamaño, MIME y encabezado PDF antes de habilitar la descarga, siempre autenticada y limitada al comercial. El mantenimiento diario existente retira cargas incompletas de más de 24 horas, en lotes de 100, con reintentos.
 
 Validación local: `SMOKE_BASE_URL=http://127.0.0.1:3060 node --use-env-proxy --env-file=.env scripts/quotations-smoke.mjs`. Usa únicamente una base local y elimina sus fixtures y archivos. Node 24 admite el proxy del entorno con `NODE_USE_ENV_PROXY=1`; no desactivar TLS. Además se verifican los smoke existentes de asignación/horarios y cierre mensual, el flujo real de navegador y el tutorial completo por rol.
+
+Actualización de modalidad: las propuestas admiten Virtual / Presencial. Su conversión requiere elegir Virtual o Presencial en cada jornada; conserva el precio único y la modalidad mixta de la propuesta. Véase `docs/MODALIDAD_MIXTA.md`.

@@ -1,5 +1,6 @@
 import { Prisma, CustomerType, ServiceStatus, TravelMode, ClassModality } from "@prisma/client";
 
+import { isDayModality } from "@/lib/class-modality";
 import { classHours } from "@/lib/class-hours";
 
 export class InvalidRecord extends Error {}
@@ -47,6 +48,8 @@ export function serviceInput(body: Record<string, unknown>) {
   const rawCourses = body.courseIds === undefined ? [body.courseId] : body.courseIds;
   if (!Array.isArray(rawCourses) || !rawCourses.length || rawCourses.length > 100) throw new InvalidRecord("Selecciona entre 1 y 100 cursos del catálogo");
   const courseIds = [...new Set(rawCourses.map(id => text(id, "Curso", 100)))];
+  const modality = body.modality || null;
+  if (modality !== null && !Object.values(ClassModality).includes(modality as ClassModality)) throw new InvalidRecord("Modalidad inválida");
   const rawSessions = body.sessions;
   if (rawSessions !== undefined && (!Array.isArray(rawSessions) || !rawSessions.length || rawSessions.length > 366)) throw new InvalidRecord("Agrega entre 1 y 366 fechas al servicio");
   const dates = serviceDates(rawSessions ? (rawSessions as Record<string, unknown>[]).map(session => session?.date) : body.serviceDates ?? [body.serviceDate]);
@@ -56,10 +59,10 @@ export function serviceInput(body: Record<string, unknown>) {
     const session = matching[0];
     const startTime = session?.startTime || null, endTime = session?.endTime || null;
     if ((startTime || endTime) && (typeof startTime !== "string" || typeof endTime !== "string" || !classHours(startTime, endTime))) throw new InvalidRecord("Usa horas de inicio y fin válidas (24 horas); el fin debe ser posterior al inicio");
-    return { date: day, startTime: startTime as string | null, endTime: endTime as string | null };
+    if (modality === 'MIXED' && !isDayModality(session?.modality)) throw new InvalidRecord(`Selecciona Virtual o Presencial para la fecha ${day.toISOString().slice(0, 10)}`);
+    return { date: day, startTime: startTime as string | null, endTime: endTime as string | null,
+      modality: (modality === 'MIXED' ? session!.modality : modality) as ClassModality | null };
   });
-  const modality = body.modality || null;
-  if (modality !== null && !Object.values(ClassModality).includes(modality as ClassModality)) throw new InvalidRecord("Modalidad inválida");
   return { ...common({ ...body, courseId: courseIds[0] }), courseIds, company: text(body.company, "Cliente"), correlativeCode: body.correlativeCode,
     requestedInvoiceDate: invoiceDate(body.invoiceDate), travelMode: travelMode as TravelMode, serviceDate: dates[0], dates, sessions, modality: modality as ClassModality | null, certificatesOnly: body.certificatesOnly,
     instructorId: body.instructorId == null || body.instructorId === "" ? null : text(body.instructorId, "Instructor", 100),

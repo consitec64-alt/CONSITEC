@@ -5,7 +5,7 @@ export type Meta = {
 };
 export type Service = {
   id: string; company: string; correlativeCode: string | null; travelMode: 'NONE' | 'PLANE' | 'BUS';
-  amount: string; invoicedAt?: string | null; serviceDate: string; dates?: { date: string; startTime?: string | null; endTime?: string | null }[]; modality?: 'VIRTUAL' | 'IN_PERSON' | null; certificatesOnly: boolean;
+  amount: string; invoicedAt?: string | null; serviceDate: string; dates?: { modality?: 'VIRTUAL' | 'IN_PERSON' | null; date: string; startTime?: string | null; endTime?: string | null }[]; modality?: 'VIRTUAL' | 'IN_PERSON' | 'MIXED' | null; certificatesOnly: boolean;
   status: string; courses?: Meta[]; course: Meta; instructor: Meta | null; location: Meta | null; salesperson: Meta;
 };
 export const serviceDays = (service: Service) => [...new Set([service.serviceDate, ...(service.dates ?? []).map(d => d.date)].map(d => d.slice(0, 10)))].sort();
