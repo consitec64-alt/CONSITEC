@@ -11,6 +11,7 @@ datasource db {
 enum Role {
   ADMIN
   SALES
+  REPORTS
 }
 
 enum ServiceStatus {
@@ -25,6 +26,8 @@ enum CustomerType {
 }
 
 model User {
+  assignedReports ServiceReport[] @relation("ReportAssignee")
+  reportDocuments ReportDocument[] @relation("DocumentUploader")
   tutorialStep Int @default(0)
   tutorialCompleted Boolean @default(false)
   id       String @id @default(cuid())
@@ -90,6 +93,7 @@ model Location {
 }
 
 model Service {
+  report ServiceReport?
   deletedAt DateTime?
   @@index([deletedAt])
   id               String        @id @default(cuid())
@@ -176,4 +180,46 @@ model MonthlyClose {
   closedAt DateTime?
   closedBy String?
   closedByName String?
+}
+
+
+enum ReportStatus {
+  PENDING
+  IN_PROGRESS
+  IN_REVIEW
+  DELIVERED
+}
+model ServiceReport {
+  id String @id @default(cuid())
+  serviceId String @unique
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  status ReportStatus @default(PENDING)
+  assigneeId String?
+  assignee User? @relation("ReportAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  dueDate DateTime?
+  deliveredAt DateTime?
+  notes String @default("")
+  folderUrl String?
+  finalReportUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  documents ReportDocument[]
+}
+model ReportDocument {
+  id String @id @default(cuid())
+  reportId String?
+  report ServiceReport? @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  name String
+  pathname String @unique
+  contentType String
+  size Int
+  category String
+  sessionDate DateTime?
+  uploaderId String?
+  uploader User? @relation("DocumentUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+  uploaderName String
+  state String @default("PENDING")
+  createdAt DateTime @default(now())
+  uploadedAt DateTime?
+  @@index([reportId, state])
 }

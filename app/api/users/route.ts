@@ -42,11 +42,11 @@ export async function POST(req: Request) {
     if (typeof password !== "string" || password.length < 12 || Buffer.byteLength(password) > 72) {
       return response({ error: "La contraseña debe tener al menos 12 caracteres y como máximo 72 bytes" }, 400);
     }
-    if (role !== "ADMIN" && role !== "SALES") return response({ error: "Selecciona un rol válido" }, 400);
-    if (typeof salespersonId !== "string" || !salespersonId || !await prisma.salesperson.findUnique({ where: { id: salespersonId } })) return response({ error: "Selecciona un comercial existente para esta cuenta" }, 400);
+    if (role !== "ADMIN" && role !== "SALES" && role !== "REPORTS") return response({ error: "Selecciona un rol válido" }, 400);
+    if (role !== "REPORTS" && (typeof salespersonId !== "string" || !salespersonId || !await prisma.salesperson.findUnique({ where: { id: salespersonId } }))) return response({ error: "Selecciona un comercial existente para esta cuenta" }, 400);
     const hashed = await bcrypt.hash(password, 12);
     const user = await auditedWrite("USER", undefined, tx => tx.user.create({
-      data: { username, password: hashed, role, salespersonId }, select: fields
+      data: { username, password: hashed, role, salespersonId: role === "REPORTS" ? null : salespersonId }, select: fields
     }));
     return response(user, 201);
   } catch (error) {
@@ -68,6 +68,8 @@ export async function PATCH(req: Request) {
     if (typeof id !== "string" || !id || id.length > 100 || (email !== undefined && !username) || (email === undefined && salespersonId === undefined)) {
       return response({ error: "Selecciona una cuenta e ingresa un correo electrónico válido" }, 400);
     }
+    const target = typeof id === "string" ? await prisma.user.findUnique({where:{id},select:{role:true}}) : null;
+    if(target?.role === "REPORTS" && salespersonId !== undefined)return response({error:"Las cuentas de informes no tienen comercial asignado"},400);
     if (salespersonId !== undefined && (typeof salespersonId !== "string" || !salespersonId || !await prisma.salesperson.findUnique({ where: { id: salespersonId } }))) return response({ error: "Selecciona un comercial existente para esta cuenta" }, 400);
     return response(await auditedWrite("USER", id, tx => tx.user.update({ where: { id }, data: { ...(username ? { username } : {}), ...(salespersonId !== undefined ? { salespersonId } : {}) }, select: fields })));
   } catch (error) {

@@ -1,3 +1,4 @@
+import { cleanupReportFiles } from '@/lib/reports';
 import { assertMonthsOpen } from '@/lib/monthly-close';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
@@ -10,6 +11,7 @@ export async function purgeExpired() {
   const deletedAt = { lte: expiredBefore() };
   // Physical deletion only of records whose seven-day recovery window has ended.
   await prisma.$transaction([prisma.service.deleteMany({ where: { deletedAt } }), prisma.certificateSale.deleteMany({ where: { deletedAt } })]);
+  await cleanupReportFiles();
 }
 export async function trashRecord(entity: string, id: string, actor: Actor) {
   return prisma.$transaction(async tx => {

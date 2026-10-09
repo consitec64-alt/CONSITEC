@@ -1,27 +1,28 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { tutorialSteps, type TutorialStep } from "@/lib/tutorial-steps";
+import { tutorialSteps, reportTutorialSteps, type TutorialStep } from "@/lib/tutorial-steps";
 
 type Tour = { active: TutorialStep | null; start: () => void };
 const Context = createContext<Tour>({ active: null, start: () => {} });
 export const useTutorial = () => useContext(Context);
 export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter(), pathname = usePathname();
+  const [role,setRole]=useState("SALES");
   const [isAdmin, setAdmin] = useState(false), [index, setIndex] = useState<number | null>(null);
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
-  const items = useMemo(() => tutorialSteps(isAdmin), [isAdmin]);
+  const items = useMemo(() => role === "REPORTS" ? reportTutorialSteps() : tutorialSteps(isAdmin), [isAdmin,role]);
   const active = index === null ? null : items[index];
   const start = useCallback(() => { if (ready) { setError(""); setIndex(0); } }, [ready]);
   useEffect(() => {
     let cancelled = false;
     void fetch("/api/auth/me").then(async res => { if (!res.ok) return; const user = await res.json(); if (cancelled) return;
-      setAdmin(user.role === "ADMIN"); setReady(true);
-      if (!user.tutorialCompleted) setIndex(Math.min(user.tutorialStep, tutorialSteps(user.role === "ADMIN").length - 1));
+      setRole(user.role); setAdmin(user.role === "ADMIN"); setReady(true);
+      if (!user.tutorialCompleted) setIndex(Math.min(user.tutorialStep, (user.role === "REPORTS" ? reportTutorialSteps() : tutorialSteps(user.role === "ADMIN")).length - 1));
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
-  useEffect(() => { if (!active) return; const path = active.tab === "users" ? "/dashboard/users" : "/dashboard"; if (pathname !== path) router.replace(path, { scroll: false }); }, [active, pathname, router]);
+  useEffect(() => { if (!active) return; const path = active.tab === "users" ? "/dashboard/users" : active.tab === "reports" ? "/dashboard/reports" : "/dashboard"; if (pathname !== path) router.replace(path, { scroll: false }); }, [active, pathname, router]);
   async function save(next: number, completed = false) {
     setBusy(true); setError("");
     try {

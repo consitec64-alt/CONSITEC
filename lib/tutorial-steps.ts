@@ -95,8 +95,8 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     step("users", ".users-page h1", "Usuarios", "Esta página está disponible solo para administradores. Aquí se crean accesos, se asignan comerciales y se gestionan las cuentas.", { admin: true }),
     step("users", '.users-form [name="email"]', "Correo de acceso", "Escribe un correo válido: será el identificador usado para iniciar sesión.", { admin: true }),
     step("users", '.users-form [name="password"]', "Contraseña inicial", "La contraseña debe tener al menos 12 caracteres y como máximo 72 bytes. Comunícala al titular por un canal privado.", { admin: true }),
-    step("users", '.users-form [name="role"]', "Rol de la cuenta", "Vendedor accede a la operación comercial. Administrador también gestiona usuarios, comerciales y colores del ranking.", { admin: true }),
-    step("users", '.users-form [name="salespersonId"]', "Asignar un comercial", "Selecciona el comercial al que pertenecerán las nuevas ventas y servicios de esta cuenta. La asignación es obligatoria al crearla.", { admin: true }),
+    step("users", '.users-form [name="role"]', "Rol de la cuenta", "Vendedor accede a la operación comercial. Administrador también gestiona usuarios y revisa Informes. Encargados de informes entra a su agenda exclusiva y no necesita comercial asignado.", { admin: true }),
+    step("users", '.users-form [name="salespersonId"]', "Asignar un comercial", "Selecciona el comercial al que pertenecerán las nuevas ventas y servicios de esta cuenta. Es obligatoria para cuentas comerciales; Encargados de informes no requiere esta asignación.", { admin: true }),
     step("users", ".users-form-footer", "Crear usuario", "Crear usuario valida los datos y habilita el acceso. No creamos una cuenta de ejemplo durante este recorrido.", { admin: true }),
     step("users", ".user-account-list, .users-page > .panel:nth-of-type(2)", "Cuentas existentes", "Cada cuenta muestra su rol y permite guardar un correo nuevo o cambiar el comercial asignado. Cambiar la asignación no mueve las ventas históricas.", { admin: true }),
     step("users", ".user-email-form [name=email], .user-account-list", "Cambiar correo", "Escribe el nuevo correo y pulsa Guardar correo. La contraseña actual se conserva y el siguiente ingreso usa el correo nuevo.", { admin: true }),
@@ -111,8 +111,9 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     step("summary", '[data-tour="monthly-close"]', "Cierre mensual", "Solo administradores pueden cerrar un mes desde su último día, según la hora de Perú. Aparece un aviso para revisar el cierre y puedes posponerlo. Revisa la agenda y los reportes antes de confirmar.", {admin:true}),
     step("summary", ".tour-close-preview", "Confirmar o reabrir el mes", "Cerrar bloquea altas, ediciones, eliminaciones y restauraciones que afecten al mes, incluidas sus fechas de facturación. Solo un administrador puede reabrirlo; ambas acciones quedan en el historial. Un servicio de varios meses requiere que todos estén abiertos. Este ejemplo no cierra ningún mes.", {admin:true,preview:"monthly-close"}),
     step("summary", '[data-tour="monthly-close"]', "Consultar un mes cerrado", "Puedes consultar los reportes de un mes cerrado. Si necesitas corregir un servicio o venta que lo afecte, solicita a un administrador que reabra el mes.", {admin:false}),
+    ...reportTutorialSteps().filter(s=>!["Tu espacio de informes","Búsqueda y filtros de informes","Cerrar sesión","Actualizar","Tema claro y oscuro","Repetir el tutorial"].includes(s.title)).map(s=>({...s,admin:true})),
   ].filter(s => (!s.admin || isAdmin) && !(isAdmin && s.title === "Consultar un mes cerrado"));
-  const order = ["summary", "services", "certificates", "performance", "instructors", "support", "history", "trash", "users"];
+  const order = ["summary", "services", "certificates", "performance", "instructors", "support", "history", "trash", "reports", "users"];
   const common = new Set(["Contraer el menú", "Cerrar sesión"]);
   const main = items.filter(s=>!common.has(s.title)).sort((a,b)=>order.indexOf(a.tab)-order.indexOf(b.tab));
   // Shared warnings belong with the service form, before leaving the agenda.
@@ -124,4 +125,29 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     step("summary", '[data-tour="refresh"]', "Actualizar", "Actualiza los datos y el estado del cierre mensual. Si otro usuario hizo cambios, este botón permite consultarlos sin cerrar tu sesión."),
     step("summary", ".theme-toggle", "Tema claro y oscuro", "El botón de sol o luna cambia el tema. Tu elección se conserva en este dispositivo."),
     step("summary", '[data-tour="replay"]', "Repetir el tutorial", "Puedes repetir el recorrido con Ver tutorial o el icono de ayuda en móvil. Finalizar u Omitir evita que se abra automáticamente. Tu avance se guarda en la cuenta.")];
+}
+
+export function reportTutorialSteps(): TutorialStep[] {
+ return [
+  step("reports", ".reports-sidebar", "Tu espacio de informes", "Tu cuenta entra directamente a este departamento sin comercial asignado. Solo encargados de informes y administradores pueden acceder. La bienvenida de CONSITEC aparece después de iniciar sesión."),
+  step("reports", ".reports-agenda", "Agenda automática de informes", "Aquí aparecen servicios Ejecutados o Facturados, fuera de papelera. Pasar de Ejecutado a Facturado no duplica la ficha; todas las jornadas de un servicio comparten un informe. Las copias de solo certificados no requieren informe de capacitación."),
+  step("reports", ".reports-filters", "Búsqueda y filtros de informes", "Elige mes y año; busca por empresa, correlativo, curso o instructor. Combina estado del informe y responsable. Limpiar restablece los filtros. La búsqueda se actualiza automáticamente."),
+  step("reports", ".reports-agenda .table-scroll", "Abrir la ficha", "Cada fila muestra fechas, instructor, cursos, estado del informe, plazo y documentos. Abrir ficha reúne la información del servicio y su documentación."),
+  step("reports", ".report-detail .report-service-days", "Una ficha, varias jornadas", "Las fechas, horarios, horas netas, modalidad y lugar vienen de la agenda comercial. Los encargados no modifican esos datos ni los importes. Mostramos una ficha de ejemplo sin guardar nada."),
+  step("reports", '.report-detail [name="reportAssignee"]', "Responsable del informe", "Asigna un encargado de informes o un administrador. La asignación es independiente de los comerciales."),
+  step("reports", '.report-detail [name="reportStatus"]', "Estado del informe", "Pendiente, En elaboración, En revisión y Entregado son estados de este departamento, independientes de Ejecutado o Facturado. Para marcar Entregado, adjunta un informe final o su enlace."),
+  step("reports", '.report-detail [name="reportDueDate"]', "Fecha límite", "Registra el plazo acordado para preparar y entregar la documentación."),
+  step("reports", '.report-detail [name="reportDeliveredAt"]', "Fecha de entrega", "Se habilita al marcar Entregado. Si la dejas vacía, se registra la fecha actual de Perú."),
+  step("reports", '.report-detail [name="reportNotes"]', "Observaciones del informe", "Anota información faltante, correcciones y avances. El cierre mensual comercial no bloquea estas actualizaciones de informes."),
+  step("reports", '.report-detail [name="reportFolderUrl"]', "Carpeta de Drive", "Puedes añadir un enlace HTTPS a la carpeta de evidencias. Sus permisos se administran en Drive; los archivos subidos directamente se protegen en CONSITEC."),
+  step("reports", '.report-detail [name="reportFinalUrl"]', "Enlace del informe final", "Este enlace es opcional si adjuntas el archivo final. La ficha permite abrir el informe y la carpeta en una nueva pestaña."),
+  step("reports", '.report-detail .report-form .dialog-actions', "Guardar ficha", "Guarda responsable, estado, plazo, enlaces y observaciones. Los cambios quedan registrados. Esta demostración no modifica registros."),
+  step("reports", '.report-detail [name="documentCategory"]', "Clasificar documentos", "Clasifica cada archivo como Informe final, Asistencia, Evaluaciones o Evidencias."),
+  step("reports", '.report-detail [name="documentSession"]', "Documentos por jornada", "General del servicio conserva el informe completo. Elegir una fecha vincula asistencia o evidencias a esa jornada, sin crear otra ficha."),
+  step("reports", '.report-detail [name="reportFiles"]', "Subir y consultar archivos", "Selecciona uno o varios PDF, Word, Excel, JPG, PNG o WebP, de hasta 10 MB por archivo. Podrás abrirlos y descargarlos dentro de la sesión. Solo su autor o un administrador puede retirarlos; no se recuperan desde Papelera. Aquí la carga está deshabilitada por ser un ejemplo."),
+  step("reports", ".reports-sidebar .logout-button", "Cerrar sesión", "Finaliza tu acceso a este departamento con Cerrar sesión."),
+  step("reports", '[data-tour="refresh"]', "Actualizar", "Recarga la agenda y la ficha para consultar cambios hechos por otros encargados."),
+  step("reports", ".theme-toggle", "Tema claro y oscuro", "El botón de sol o luna cambia el tema y conserva tu elección en este dispositivo."),
+  step("reports", '[data-tour="replay"]', "Repetir el tutorial", "Ver tutorial repite esta guía del departamento. Finalizar u Omitir evita que se abra automáticamente; tu avance queda guardado en la cuenta.")
+ ];
 }

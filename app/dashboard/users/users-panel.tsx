@@ -8,7 +8,7 @@ import CompanyFooter from "@/components/company-footer";
 import ThemeToggle from "@/components/theme-toggle";
 import Brand from "@/components/brand";
 
-type User = { id: string; username: string; role: "ADMIN" | "SALES"; salespersonId: string | null; salesperson: { id: string; name: string } | null };
+type User = { id: string; username: string; role: "ADMIN" | "SALES" | "REPORTS"; salespersonId: string | null; salesperson: { id: string; name: string } | null };
 async function request(url: string, options?: RequestInit) {
   const res = await fetch(url, options);
   if (res.status === 401) { window.location.assign("/login"); throw new Error("Inicia sesión nuevamente."); }
@@ -19,6 +19,7 @@ async function request(url: string, options?: RequestInit) {
 
 export default function UsersPanel() {
   const { start: startTutorial } = useTutorial();
+  const [newRole,setNewRole]=useState("SALES");
   const [users, setUsers] = useState<User[]>([]);
   const [salespeople, setSalespeople] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +51,7 @@ export default function UsersPanel() {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values)
       });
       setUsers(previous => [...previous, user].sort((a, b) => a.username.localeCompare(b.username)));
-      form.reset(); setNotice(`Usuario ${user.username} creado. Ya puede iniciar sesión.`);
+      form.reset(); setNewRole("SALES"); setNotice(`Usuario ${user.username} creado. Ya puede iniciar sesión.`);
     } catch (err) { setError(err instanceof Error ? err.message : "No se pudo crear el usuario."); }
     finally { setBusy(false); }
   }
@@ -88,22 +89,22 @@ export default function UsersPanel() {
       <form onSubmit={create} className="users-form">
         <label className="users-field">Correo electrónico<input name="email" type="email" autoComplete="off" autoCapitalize="none" required maxLength={254} placeholder="nombre@empresa.com" /><small>Será el correo para iniciar sesión.</small></label>
         <label className="users-field">Contraseña<input name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={72} /><small>Al menos 12 caracteres; máximo 72 bytes.</small></label>
-        <label className="users-field">Rol<select name="role" defaultValue="SALES"><option value="SALES">Vendedor</option><option value="ADMIN">Administrador</option></select></label>
-        <label className="users-field">Comercial asignado<select name="salespersonId" defaultValue="" required><option value="">Selecciona un comercial</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label>
-        <div className="users-form-footer"><p className="form-note">Los administradores pueden crear usuarios. Ambos roles tienen acceso a la operación comercial. Cada cuenta registra automáticamente las nuevas ventas a nombre de su comercial asignado.</p>
+        <label className="users-field">Rol<select name="role" value={newRole} onChange={e=>setNewRole(e.target.value)}><option value="SALES">Vendedor</option><option value="ADMIN">Administrador</option><option value="REPORTS">Encargados de informes</option></select></label>
+        {newRole!=="REPORTS" && <label className="users-field">Comercial asignado<select name="salespersonId" defaultValue="" required><option value="">Selecciona un comercial</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label>}
+        <div className="users-form-footer"><p className="form-note">Los administradores pueden crear usuarios. Los encargados de informes ingresan a su propio espacio sin comercial asignado. Las cuentas comerciales registran ventas a nombre de su comercial.</p>
         <button className="btn" disabled={busy}>{busy ? "Creando…" : "Crear usuario"}</button></div>
       </form>
     </section>
     <section className="panel"><div className="section-heading"><h2>Cuentas existentes</h2><button className="text-button" disabled={loading} onClick={() => { setError(""); void load().catch(err => setError(err.message)); }}>Actualizar</button></div>
       <p className="form-note">Asigna un correo a las cuentas existentes. Su contraseña se conserva; después del cambio deben ingresar con el correo nuevo. Verifica la dirección antes de guardar.</p>
       {loading ? <p role="status">Cargando usuarios…</p> : <ul className="user-account-list">{users.map(user => <li key={user.id} className="user-account">
-        <div className="user-identity"><strong>{user.username}</strong><span className="user-role">{user.role === "ADMIN" ? "Administrador" : "Vendedor"}</span>
+        <div className="user-identity"><strong>{user.username}</strong><span className="user-role">{user.role === "ADMIN" ? "Administrador" : user.role === "REPORTS" ? "Encargados de informes" : "Vendedor"}</span>
         <button type="button" className="user-delete-button" disabled={busy || user.id === currentId} title={user.id === currentId ? "No puedes eliminar tu propia cuenta" : undefined} onClick={() => { setDeleteError(""); setDeleteTarget(user); }} aria-label={`Eliminar cuenta de ${user.username}`}><Trash2 size={14} />Eliminar cuenta</button></div>
         <form className="user-email-form" onSubmit={updateEmail}>
         <input type="hidden" name="id" value={user.id} />
         <label className="users-field">Correo de {user.username}<input name="email" type="email" autoComplete="off" autoCapitalize="none" required maxLength={254} defaultValue={user.username.includes("@") ? user.username : ""} placeholder="nombre@empresa.com" /></label>
         <button className="btn secondary" disabled={busy}>{busy ? "Guardando…" : "Guardar correo"}</button>
-      </form><form className="user-email-form" onSubmit={updateEmail}><input type="hidden" name="id" value={user.id} /><label className="users-field">Comercial de {user.username}<select name="salespersonId" defaultValue={user.salespersonId || ''} required><option value="">Sin asignar</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label><button className="btn secondary" disabled={busy}>Guardar comercial</button></form></li>)}</ul>}
+      </form>{user.role!=="REPORTS" && <form className="user-email-form" onSubmit={updateEmail}><input type="hidden" name="id" value={user.id} /><label className="users-field">Comercial de {user.username}<select name="salespersonId" defaultValue={user.salespersonId || ''} required><option value="">Sin asignar</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label><button className="btn secondary" disabled={busy}>Guardar comercial</button></form>}{user.role==="REPORTS"&&<p className="form-note">Acceso exclusivo a Informes · no requiere comercial.</p>}</li>)}</ul>}
     </section>
     {deleteTarget && <dialog ref={deleteDialog} className="dialog users-delete-dialog" aria-labelledby="delete-user-title" onCancel={e => { if (busy) e.preventDefault(); else setDeleteTarget(null); }}>
       <div className="section-heading"><h2 id="delete-user-title">Eliminar usuario</h2></div>

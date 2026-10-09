@@ -21,7 +21,7 @@ export async function middleware(req: NextRequest) {
   let user = null;
   if (session) {
     try {
-      user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true } });
+      user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, role: true } });
     } catch {
       return NextResponse.json({ error: "Servicio temporalmente no disponible" }, { status: 503 });
     }
@@ -30,6 +30,13 @@ export async function middleware(req: NextRequest) {
     return isApi
       ? NextResponse.json({ error: "Debes iniciar sesión" }, { status: 401 })
       : NextResponse.redirect(new URL("/login", req.url));
+  }
+  const path=req.nextUrl.pathname;
+  if(user.role === "REPORTS") {
+    const allowed=isApi ? path.startsWith("/api/reports/")||path==="/api/reports"||path.startsWith("/api/auth/") : path.startsWith("/dashboard/reports");
+    if(!allowed)return isApi?NextResponse.json({error:"Tu cuenta tiene acceso exclusivo al departamento de informes"},{status:403}):NextResponse.redirect(new URL("/dashboard/reports",req.url));
+  } else if(user.role === "SALES" && (path==="/api/reports"||path.startsWith("/api/reports/")||path.startsWith("/dashboard/reports"))) {
+    return isApi?NextResponse.json({error:"Solo encargados de informes y administradores"},{status:403}):NextResponse.redirect(new URL("/dashboard",req.url));
   }
   const response = NextResponse.next();
   if (isApi) response.headers.set("Cache-Control", "private, no-store");
