@@ -52,6 +52,7 @@ export async function writeService(body: Record<string, unknown>, id?: string, u
     if (id) await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))::text`;
     const existing = id ? await tx.service.findUniqueOrThrow({ where: { id, deletedAt: null }, include: serviceInclude }) : undefined;
     if (await tx.course.count({ where: { id: { in: courseIds } } }) !== courseIds.length) throw new InvalidRecord("Uno de los cursos seleccionados ya no existe");
+    if(existing?.certificateSaleId)throw new InvalidRecord('Edita la venta vinculada desde Venta de certificados');
     const salespersonId = existing?.salespersonId ?? quotation?.salespersonId ?? await assignedSalesperson(tx, userId);
     const duplicates = await serviceDuplicates(tx, data.company, courseIds, dates, id);
     const invoicedAt = invoiceDateFor(data.status, requestedInvoiceDate, existing);

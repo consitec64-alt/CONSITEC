@@ -1,3 +1,4 @@
+import { syncCertificateAgenda } from "@/lib/certificate-agenda";
 import { assertMonthsOpen } from '@/lib/monthly-close';
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (duplicates.length && body.allowDuplicate !== true) throw new PossibleDuplicate(duplicates);
       if (await tx.course.count({where:{id:{in:courseIds}}}) !== courseIds.length) throw new InvalidRecord("Uno de los cursos seleccionados ya no existe");
       const saved = await tx.certificateSale.update({ where: { id }, data: { ...data, invoicedAt, courses:{set:courseIds.map(id=>({id}))} }, include: { course: true, courses: true, salesperson: true } });
+      await syncCertificateAgenda(tx,saved,courseIds,actor);
       await audit(tx, actor, "CERTIFICATE", "UPDATE", existing, saved);
       return saved;
     });
@@ -43,3 +45,5 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     return NextResponse.json({ message: "Venta enviada a la papelera durante 7 días" });
   } catch (error) { return recordError(error); }
 }
+
+export async function GET(req:Request,{params}:{params:Promise<{id:string}>}){try{return NextResponse.json(await prisma.certificateSale.findUniqueOrThrow({where:{id:(await params).id,deletedAt:null},include:{course:true,courses:true,salesperson:true}}));}catch(error){return recordError(error);}}

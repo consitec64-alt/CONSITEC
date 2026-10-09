@@ -7,12 +7,12 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const actor = await currentUser(); if (!actor) return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 });
   await purgeExpired();
-  const where = { deletedAt: { gt: expiredBefore() }, ...(actor.role === 'ADMIN' ? {} : { salespersonId: actor.salespersonId || '__unassigned__' }) };
+  const where = { deletedAt: { gt: expiredBefore() }, ...(actor.role !== 'SALES' ? {} : { salespersonId: actor.salespersonId || '__unassigned__' }) };
   const [services, sales] = await Promise.all([
     prisma.service.findMany({ where, include: { salesperson: true, course: true, courses: true }, orderBy: { deletedAt: 'desc' } }),
     prisma.certificateSale.findMany({ where, include: { salesperson: true, course: true, courses: true }, orderBy: { deletedAt: 'desc' } })
   ]);
-  const rows = [...services.map(s => ({ entity: 'SERVICE', id: s.id, label: s.company, amount: s.amount.toString(), date: s.serviceDate, deletedAt: s.deletedAt!, salesperson: s.salesperson.name, course: (s.courses.length?s.courses:[s.course]).map(c=>c.name).join(" · ") })),
+  const rows = [...services.map(s => ({ linked:!!s.certificateSaleId, entity: 'SERVICE', id: s.id, label: s.company, amount: s.amount.toString(), date: s.serviceDate, deletedAt: s.deletedAt!, salesperson: s.salesperson.name, course: (s.courses.length?s.courses:[s.course]).map(c=>c.name).join(" · ") })),
     ...sales.map(s => ({ entity: 'CERTIFICATE', id: s.id, label: s.customerName, amount: s.amount.toString(), date: s.saleDate, deletedAt: s.deletedAt!, salesperson: s.salesperson.name, course: (s.courses.length?s.courses:[s.course]).map(c=>c.name).join(" · ") }))]
     .map(s => ({ ...s, expiresAt: new Date(s.deletedAt.getTime()+RETENTION_MS) })).sort((a,b)=>b.deletedAt.getTime()-a.deletedAt.getTime());
   return NextResponse.json({ rows });

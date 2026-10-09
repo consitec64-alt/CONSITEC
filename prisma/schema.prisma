@@ -11,12 +11,14 @@ datasource db {
 enum Role {
   ADMIN
   SALES
+  SUPERVISOR
 }
 
 enum ServiceStatus {
   SCHEDULED
   EXECUTED
   INVOICED
+  PAID
 }
 
 enum CustomerType {
@@ -28,6 +30,10 @@ model User {
   tutorialStep Int @default(0)
   tutorialCompleted Boolean @default(false)
   id       String @id @default(cuid())
+  avatar String?
+  textSize String @default("normal")
+  mustChangePassword Boolean @default(false)
+  sessionVersion Int @default(0)
   username String @unique
   password String
   role     Role
@@ -100,6 +106,8 @@ model Location {
 }
 
 model Service {
+  certificateSaleId String? @unique
+  certificateSale CertificateSale? @relation(fields: [certificateSaleId], references: [id], onDelete: SetNull)
   quotation Quotation?
   deletedAt DateTime?
   @@index([deletedAt])
@@ -134,6 +142,7 @@ model Service {
 }
 
 model CertificateSale {
+  agendaService Service?
   deletedAt DateTime?
   @@index([deletedAt])
   id            String        @id @default(cuid())
