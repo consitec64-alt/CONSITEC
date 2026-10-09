@@ -5,17 +5,21 @@ import { NextResponse } from "next/server";
 import { agendaWhere } from "@/lib/service-scheduling";
 import { prisma } from "@/lib/prisma";
 
-function weekOfMonth(date: Date) {
-  return Math.min(4, Math.ceil(date.getDate() / 7));
-}
+import { defaultWeekRanges, validateWeekRanges, weekDefinitions, weekForDate } from "@/lib/commercial-weeks";
+import { parsePeriod, monthKey } from "@/lib/monthly-close";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const month = Number(searchParams.get("month"));
     const year = Number(searchParams.get("year"));
-    const start = new Date(year, month - 1, 1);
-    const end = new Date(year, month, 1);
+    const period=parsePeriod(year,month);
+    if(!period)return NextResponse.json({error:"Mes y año inválidos"},{status:400});
+    const plan=await prisma.commercialWeekPlan.findUnique({where:{id:monthKey(period)}});
+    const weeks=weekDefinitions(plan?validateWeekRanges(plan.ranges,period):defaultWeekRanges(period));
+    const emptyWeeks=()=>Object.fromEntries(weeks.map(w=>[w.key,0]));
+    const start = new Date(Date.UTC(year, month - 1, 1));
+    const end = new Date(Date.UTC(year, month, 1));
 
     const services = await prisma.service.findMany({
       where: agendaWhere(start, end),
@@ -58,12 +62,7 @@ export async function GET(req: Request) {
     ).toNumber();
 
     const bySalesperson: Record<string, number> = {};
-    const byWeek: Record<string, number> = {
-      "Week 1": 0,
-      "Week 2": 0,
-      "Week 3": 0,
-      "Week 4": 0
-    };
+    const byWeek: Record<string, number> = emptyWeeks();
     const weeklyMatrix: Record<string, Record<string, number>> = {};
     const byCourse: Record<string, number> = {};
     const byInstructor: Record<string, number> = {};
@@ -71,7 +70,8 @@ export async function GET(req: Request) {
     for (const s of services) {
       const rep = s.salesperson?.name ?? "Sin comercial";
       for (const activityDate of daysInMonth(s)) {
-      const weekLabel = `Week ${weekOfMonth(activityDate)}`;
+      const weekLabel = weekForDate(activityDate,weeks);
+      if(!weekLabel)throw Error("La configuración semanal no cubre esta fecha");
 
       bySalesperson[rep] = (bySalesperson[rep] ?? 0) + 1;
       byWeek[weekLabel] = (byWeek[weekLabel] ?? 0) + 1;
@@ -86,12 +86,7 @@ export async function GET(req: Request) {
       }
 
       if (!weeklyMatrix[rep]) {
-        weeklyMatrix[rep] = {
-          "Week 1": 0,
-          "Week 2": 0,
-          "Week 3": 0,
-          "Week 4": 0
-        };
+        weeklyMatrix[rep] = emptyWeeks();
       }
 
       weeklyMatrix[rep][weekLabel] += 1;
@@ -109,6 +104,7 @@ export async function GET(req: Request) {
       Object.entries(byInstructor).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "-";
 
     return NextResponse.json({
+      weeks,
       reportSalespeople,
       monthlyServices,
       totalServices,
