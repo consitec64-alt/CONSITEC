@@ -51,7 +51,7 @@ try {
   const quote = (await api('/api/quotations', seller, 'POST', { company: prefix, amount: 500, courseIds: [course.id], status: 'DRAFT' }, 201)).data; quotes.push(quote.id);
   assert.equal((await profile('QUOTATION', quote.id, admin)).name, reps[0].name);
   assert.equal((await profile('QUOTATION', quote.id, seller)).name, reps[0].name);
-  assert.equal((await profile('QUOTATION', quote.id, supervisor)).name, reps[0].name);
+  await profile('QUOTATION', quote.id, supervisor, 403);
   await profile('QUOTATION', quote.id, other, 404);
   const update = await db.auditLog.findFirstOrThrow({ where: { entity: 'SERVICE', recordId: service.id, action: 'UPDATE' } });
   const actionProfile = await profile('HISTORY', update.id, admin);
@@ -70,7 +70,7 @@ try {
   await db.user.delete({ where: { id: users[1].id } });
   const deleted = await profile('CERTIFICATE', sale.id, admin);
   assert.equal(deleted.state, 'deleted'); assert.equal(deleted.avatar, null); assert.equal(deleted.name, 'Cuenta eliminada'); assert.equal(deleted.commercial, reps[0].name);
-  assert.equal((await profile('QUOTATION', quote.id, supervisor)).state, 'deleted');
+  assert.equal((await profile('QUOTATION', quote.id, admin)).state, 'deleted');
   await db.service.update({ where: { id: service.id }, data: { deletedAt: new Date() } });
   await profile('SERVICE', service.id, admin, 404);
   console.log(`PASS ${checks} HTTP checks: original authors, later edits, certificate copy attribution, shared commercial/reassignment, role scopes, private field exclusion, history actors, deleted accounts and legacy records.`);

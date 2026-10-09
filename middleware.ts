@@ -34,7 +34,13 @@ export async function middleware(req: NextRequest) {
   }
   const personal = ["/api/auth/logout","/api/auth/tutorial","/api/profile"].includes(req.nextUrl.pathname);
   if (isApi && user.mustChangePassword && !personal && req.nextUrl.pathname!=="/api/auth/me") return NextResponse.json({error:"Cambia tu contraseña temporal para continuar",code:"PASSWORD_CHANGE_REQUIRED"},{status:403});
-  if (isApi && user.role === "SUPERVISOR" && !["GET","HEAD","OPTIONS"].includes(req.method) && !personal) return NextResponse.json({error:"El supervisor tiene acceso de consulta"},{status:403});
+  if (user.role === "SUPERVISOR") {
+    const path = req.nextUrl.pathname;
+    if (!isApi && path !== '/dashboard') return NextResponse.redirect(new URL('/dashboard', req.url));
+    const registerWrite = path === '/api/instructor-register' && req.method === 'PATCH';
+    const allowedRead = ['/api/auth/me','/api/dashboard','/api/services','/api/instructor-register','/api/metadata/instructors','/api/metadata/courses','/api/metadata/locations'].includes(path) || (path === '/api/record-profile' && req.nextUrl.searchParams.get('entity') === 'SERVICE');
+    if (isApi && !personal && !registerWrite && (!allowedRead || !['GET','HEAD','OPTIONS'].includes(req.method))) return NextResponse.json({error:'El supervisor solo tiene acceso a vista general, agenda y registro de instructores'},{status:403});
+  }
   const response = NextResponse.next();
   if (isApi) response.headers.set("Cache-Control", "private, no-store");
   return response;

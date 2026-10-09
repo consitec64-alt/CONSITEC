@@ -41,7 +41,7 @@ export async function GET(req: Request) {
   }
   const headers = { 'Cache-Control': 'private, no-store' };
   if (!event) return NextResponse.json({ state: 'unknown', commercial, name: 'Autor no registrado', avatar: null, role: null, registeredAt: null }, { headers });
-  const user = await prisma.user.findUnique({ where: { id: event.actorId }, select: { avatar: true, role: true, salesperson: { select: { name: true } } } });
+  const user = await prisma.user.findUnique({ where: { id: event.actorId }, select: { displayName: true, avatar: true, role: true, salesperson: { select: { name: true } } } });
   // Login email, password, preferences and security fields are intentionally excluded.
-  return NextResponse.json({ state: user ? 'active' : 'deleted', name: user ? user.salesperson?.name || roles[user.role] || 'Integrante del equipo' : 'Cuenta eliminada', avatar: user?.avatar ?? null, role: user ? roles[user.role] || 'Integrante del equipo' : null, commercial, registeredAt: event.createdAt }, { headers });
+  return NextResponse.json({ state: user ? 'active' : 'deleted', name: user ? user.displayName || user.salesperson?.name || roles[user.role] || 'Integrante del equipo' : 'Cuenta eliminada', avatar: user?.avatar ?? null, role: user ? roles[user.role] || 'Integrante del equipo' : null, commercial, registeredAt: event.createdAt }, { headers });
 }

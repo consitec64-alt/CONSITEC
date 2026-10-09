@@ -8,7 +8,7 @@ import { normalizeEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-const fields = { id: true, username: true, role: true, salespersonId: true, salesperson: { select: { id: true, name: true } } } as const;
+const fields = { displayName: true, id: true, username: true, role: true, salespersonId: true, salesperson: { select: { id: true, name: true } } } as const;
 const response = (body: unknown, status = 200) => NextResponse.json(body, {
   status, headers: { "Cache-Control": "private, no-store" }
 });
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     if (denied) return denied;
     let body;
     try { body = await req.json(); } catch { return response({ error: "Solicitud inválida" }, 400); }
-    const { email, password, role, salespersonId } = body ?? {};
+    const { email, password, role, salespersonId, displayName } = body ?? {};
     const username = normalizeEmail(email);
     if (!username) return response({ error: "Ingresa un correo electrónico válido" }, 400);
     if (typeof password !== "string" || password.length < 12 || Buffer.byteLength(password) > 72) {
@@ -44,9 +44,10 @@ export async function POST(req: Request) {
     }
     if (role !== "ADMIN" && role !== "SALES" && role !== "SUPERVISOR") return response({ error: "Selecciona un rol válido" }, 400);
     if (role !== "SUPERVISOR" && (typeof salespersonId !== "string" || !salespersonId || !await prisma.salesperson.findUnique({ where: { id: salespersonId } }))) return response({ error: "Selecciona un comercial existente para esta cuenta" }, 400);
+    if(role === 'SUPERVISOR' && (typeof displayName !== 'string' || !displayName.trim() || displayName.trim().length > 100)) return response({error:'Ingresa el nombre del supervisor (hasta 100 caracteres)'},400);
     const hashed = await bcrypt.hash(password, 12);
     const user = await auditedWrite("USER", undefined, tx => tx.user.create({
-      data: { username, password: hashed, role, salespersonId:role === "SUPERVISOR" ? null : salespersonId }, select: fields
+      data: { displayName:role === "SUPERVISOR" ? displayName.trim() : null, username, password: hashed, role, salespersonId:role === "SUPERVISOR" ? null : salespersonId }, select: fields
     }));
     return response(user, 201);
   } catch (error) {
@@ -63,15 +64,16 @@ export async function PATCH(req: Request) {
     if (denied) return denied;
     let body;
     try { body = await req.json(); } catch { return response({ error: "Solicitud inválida" }, 400); }
-    const { id, email, salespersonId } = body ?? {};
+    const { id, email, salespersonId, displayName } = body ?? {};
     const username = email === undefined ? undefined : normalizeEmail(email);
-    if (typeof id !== "string" || !id || id.length > 100 || (email !== undefined && !username) || (email === undefined && salespersonId === undefined)) {
+    if (typeof id !== "string" || !id || id.length > 100 || (email !== undefined && !username) || (email === undefined && salespersonId === undefined && displayName === undefined)) {
       return response({ error: "Selecciona una cuenta e ingresa un correo electrónico válido" }, 400);
     }
     const target=await prisma.user.findUniqueOrThrow({where:{id}});
+    if(displayName !== undefined && (target.role !== 'SUPERVISOR' || typeof displayName !== 'string' || !displayName.trim() || displayName.trim().length > 100)) return response({error:'Ingresa un nombre válido para el supervisor (hasta 100 caracteres)'},400);
     if(target.role === "SUPERVISOR" && salespersonId) return response({error:"El supervisor no necesita comercial asignado"},400);
     if (target.role !== "SUPERVISOR" && salespersonId !== undefined && (typeof salespersonId !== "string" || !salespersonId || !await prisma.salesperson.findUnique({ where: { id: salespersonId } }))) return response({ error: "Selecciona un comercial existente para esta cuenta" }, 400);
-    return response(await auditedWrite("USER", id, tx => tx.user.update({ where: { id }, data: { ...(username ? { username } : {}), ...(salespersonId !== undefined ? { salespersonId:target.role === "SUPERVISOR" ? null : salespersonId } : {}) }, select: fields })));
+    return response(await auditedWrite("USER", id, tx => tx.user.update({ where: { id }, data: { ...(displayName !== undefined ? {displayName:displayName.trim()} : {}), ...(username ? { username } : {}), ...(salespersonId !== undefined ? { salespersonId:target.role === "SUPERVISOR" ? null : salespersonId } : {}) }, select: fields })));
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") return response({ error: "Ese correo electrónico ya está registrado" }, 409);

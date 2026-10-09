@@ -9,7 +9,7 @@ import CompanyFooter from "@/components/company-footer";
 import ThemeToggle from "@/components/theme-toggle";
 import Brand from "@/components/brand";
 
-type User = { id: string; username: string; role: "ADMIN" | "SALES" | "SUPERVISOR"; salespersonId: string | null; salesperson: { id: string; name: string } | null };
+type User = { displayName:string|null; id: string; username: string; role: "ADMIN" | "SALES" | "SUPERVISOR"; salespersonId: string | null; salesperson: { id: string; name: string } | null };
 async function request(url: string, options?: RequestInit) {
   const res = await fetch(url, options);
   if (res.status === 401) { window.location.assign("/login"); throw new Error("Inicia sesión nuevamente."); }
@@ -19,8 +19,9 @@ async function request(url: string, options?: RequestInit) {
 }
 
 export default function UsersPanel() {
-  const { start: startTutorial } = useTutorial();
+  const { active:tutorial, start: startTutorial } = useTutorial();
   const [role,setRole]=useState("SALES");
+  useEffect(()=>{if(tutorial)setRole(tutorial.target.includes('name="displayName"')?"SUPERVISOR":"SALES");},[tutorial]);
   const [resetTarget,setResetTarget]=useState<User|null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [salespeople, setSalespeople] = useState<{ id: string; name: string }[]>([]);
@@ -67,7 +68,7 @@ export default function UsersPanel() {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values)
       });
       setUsers(previous => previous.map(item => item.id === user.id ? user : item).sort((a, b) => a.username.localeCompare(b.username)));
-      setNotice(values.salespersonId ? `Comercial asignado a ${user.username}. Las nuevas ventas usarán esta asignación; los registros anteriores se conservan.` : `Correo guardado. Esta cuenta ahora inicia sesión con ${user.username} y su contraseña actual.`);
+      setNotice(values.displayName ? `Nombre guardado: ${user.displayName}.` : values.salespersonId ? `Comercial asignado a ${user.username}. Las nuevas ventas usarán esta asignación; los registros anteriores se conservan.` : `Correo guardado. Esta cuenta ahora inicia sesión con ${user.username} y su contraseña actual.`);
     } catch (err) { setError(err instanceof Error ? err.message : "No se pudo actualizar el correo."); }
     finally { setBusy(false); }
   }
@@ -94,21 +95,21 @@ export default function UsersPanel() {
         <label className="users-field">Correo electrónico<input name="email" type="email" autoComplete="off" autoCapitalize="none" required maxLength={254} placeholder="nombre@empresa.com" /><small>Será el correo para iniciar sesión.</small></label>
         <label className="users-field">Contraseña<input name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={72} /><small>Al menos 12 caracteres; máximo 72 bytes.</small></label>
         <label className="users-field">Rol<select name="role" value={role} onChange={e=>setRole(e.target.value)}><option value="SALES">Vendedor</option><option value="ADMIN">Administrador</option><option value="SUPERVISOR">Supervisor</option></select></label>
-        {role!=="SUPERVISOR"&&<label className="users-field">Comercial asignado<select name="salespersonId" defaultValue="" required><option value="">Selecciona un comercial</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label>}
-        <div className="users-form-footer"><p className="form-note">Los administradores pueden crear usuarios. El supervisor consulta todo el equipo y no necesita comercial asignado. Administradores y vendedores registran ventas con su comercial. Cada cuenta registra automáticamente las nuevas ventas a nombre de su comercial asignado.</p>
+        {role==="SUPERVISOR"&&<label className="users-field">Nombre del supervisor<input name="displayName" required maxLength={100} placeholder="Nombre y apellidos"/><small>No necesita un comercial asignado.</small></label>}{role!=="SUPERVISOR"&&<label className="users-field">Comercial asignado<select name="salespersonId" defaultValue="" required><option value="">Selecciona un comercial</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label>}
+        <div className="users-form-footer"><p className="form-note">Los administradores pueden crear usuarios. El supervisor consulta vista general, agenda y registro de instructores; puede cambiar confirmaciones y tiene nombre propio, sin comercial asignado. Administradores y vendedores registran ventas con su comercial. Cada cuenta registra automáticamente las nuevas ventas a nombre de su comercial asignado.</p>
         <button className="btn" disabled={busy}>{busy ? "Creando…" : "Crear usuario"}</button></div>
       </form>
     </section>
     <section className="panel" id="existing-accounts"><div className="section-heading"><h2>Cuentas existentes</h2><button className="text-button" disabled={loading} onClick={() => { setError(""); void load().catch(err => setError(err.message)); }}>Actualizar</button></div>
       <p className="form-note">Asigna un correo a las cuentas existentes. Su contraseña se conserva; después del cambio deben ingresar con el correo nuevo. Verifica la dirección antes de guardar.</p>
       {loading ? <p role="status">Cargando usuarios…</p> : <ul className="user-account-list">{users.map(user => <li key={user.id} className="user-account">
-        <div className="user-identity"><strong>{user.username}</strong><span className="user-role">{user.role === "ADMIN" ? "Administrador" : user.role === "SUPERVISOR" ? "Supervisor" : "Vendedor"}</span>
+        <div className="user-identity">{user.displayName&&<strong>{user.displayName}</strong>}<strong>{user.username}</strong><span className="user-role">{user.role === "ADMIN" ? "Administrador" : user.role === "SUPERVISOR" ? "Supervisor" : "Vendedor"}</span>
         <button type="button" className="text-button" data-tour="reset-password" disabled={busy||user.id===currentId} onClick={()=>{setError("");setResetTarget(user);}}>Restablecer contraseña</button><button type="button" className="user-delete-button" disabled={busy || user.id === currentId} title={user.id === currentId ? "No puedes eliminar tu propia cuenta" : undefined} onClick={() => { setDeleteError(""); setDeleteTarget(user); }} aria-label={`Eliminar cuenta de ${user.username}`}><Trash2 size={14} />Eliminar cuenta</button></div>
         <form className="user-email-form" onSubmit={updateEmail}>
         <input type="hidden" name="id" value={user.id} />
         <label className="users-field">Correo de {user.username}<input name="email" type="email" autoComplete="off" autoCapitalize="none" required maxLength={254} defaultValue={user.username.includes("@") ? user.username : ""} placeholder="nombre@empresa.com" /></label>
         <button className="btn secondary" disabled={busy}>{busy ? "Guardando…" : "Guardar correo"}</button>
-      </form>{user.role!=="SUPERVISOR"&&<form className="user-email-form" onSubmit={updateEmail}><input type="hidden" name="id" value={user.id} /><label className="users-field">Comercial de {user.username}<select name="salespersonId" defaultValue={user.salespersonId || ''} required><option value="">Sin asignar</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label><button className="btn secondary" disabled={busy}>Guardar comercial</button></form>}</li>)}</ul>}
+      </form>{user.role==="SUPERVISOR"&&<form className="user-email-form" onSubmit={updateEmail}><input type="hidden" name="id" value={user.id}/><label className="users-field">Nombre del supervisor<input name="displayName" required maxLength={100} defaultValue={user.displayName||''} placeholder="Nombre y apellidos"/></label><button className="btn secondary" disabled={busy}>Guardar nombre</button></form>}{user.role!=="SUPERVISOR"&&<form className="user-email-form" onSubmit={updateEmail}><input type="hidden" name="id" value={user.id} /><label className="users-field">Comercial de {user.username}<select name="salespersonId" defaultValue={user.salespersonId || ''} required><option value="">Sin asignar</option>{salespeople.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label><button className="btn secondary" disabled={busy}>Guardar comercial</button></form>}</li>)}</ul>}
     </section>
     {deleteTarget && <dialog ref={deleteDialog} className="dialog users-delete-dialog" aria-labelledby="delete-user-title" onCancel={e => { if (busy) e.preventDefault(); else setDeleteTarget(null); }}>
       <div className="section-heading"><h2 id="delete-user-title">Eliminar usuario</h2></div>

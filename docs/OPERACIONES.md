@@ -248,8 +248,7 @@ todos los cursos impartidos en cada jornada.
 **Confirmación** comienza vacía. Al marcarla, una ventana solicita aceptar y advierte
 que quedará guardada. Cancelar conserva la jornada sin confirmar. La confirmación
 persiste por servicio, fecha e instructor; el vendedor no puede quitarla después.
-Solo un administrador puede cambiarla, también con confirmación previa. El supervisor
-solo consulta. Los cambios quedan en Historial y no alteran el estado ni el importe
+Un administrador o supervisor puede cambiarla, también con confirmación previa. Los cambios quedan en Historial y no alteran el estado ni el importe
 del servicio. Editar o recuperar un servicio conserva sus confirmaciones para las
 fechas e instructores que sigan presentes; la purga definitiva elimina también sus
 confirmaciones. La migración `20261010300000_instructor_confirmations` añade una tabla
@@ -277,3 +276,5 @@ El primer script crea y limpia fixtures solo en localhost/consitec. El segundo
 genera un archivo aislado para comprobar su lectura con una herramienta Excel.
 
 Prueba de permisos y persistencia: `SMOKE_BASE_URL=http://127.0.0.1:3078 node scripts/instructor-confirmations-smoke.mjs` (solo base y aplicación locales).
+
+La agenda muestra solo correlativo, empresa, cursos e instructores en la primera tarjeta de cada fecha. Las clases adicionales se apilan detrás; pulsar la fecha o tarjeta abre todas sus clases con detalles completos y los permisos de cada rol.
