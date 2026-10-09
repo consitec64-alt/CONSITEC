@@ -26,3 +26,13 @@ SMOKE_BASE_URL=http://127.0.0.1:3070 node scripts/smoke-certificates-profile.mjs
 ```
 
 La prueba rechaza bases/aplicaciones remotas, crea fixtures propios y los elimina. Comprueba sincronización, umbral S/700, estados, facturación única, papelera, permisos de supervisor, perfil, restablecimiento y revocación de sesiones. Preview y producción mantienen bases separadas; no aplicar estas migraciones a producción antes de la revisión.
+
+## Perfiles desde los registros
+
+El botón **Ver perfil** aparece en las tarjetas de servicios, ventas de certificados, cotizaciones (tabla y ficha), edición de un registro y resumen mensual. Abre una ficha de consulta con la foto actual, nombre del comercial del autor, rol y fecha de creación; el comercial del registro se muestra por separado. Si el autor no tiene un comercial asignado, se identifica por su rol.
+
+La autoría se obtiene del evento de creación del historial, no de la última edición ni de otras cuentas que compartan un comercial. Las copias de certificados en la agenda consultan la creación de la venta original. En Historial de cambios, el botón identifica al autor de esa acción concreta. Las cuentas eliminadas y los registros anteriores al historial se indican expresamente sin atribuirlos a otra persona.
+
+La consulta requiere sesión y respeta el alcance existente: servicios y certificados compartidos; cotizaciones propias del comercial para vendedores, todo el equipo para administradores y supervisores; historial según sus permisos. No se entregan correos de acceso, contraseñas, preferencias ni información de sesiones. Los perfiles se cargan únicamente al abrirlos, sin peticiones por cada fila de las tablas. No requiere migraciones ni servicios adicionales.
+
+Comprobación local: `SMOKE_BASE_URL=http://127.0.0.1:3073 node scripts/record-profiles-smoke.mjs` contra una instancia local preparada. El script usa datos temporales y los elimina al terminar.
