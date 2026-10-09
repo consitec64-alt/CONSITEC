@@ -1,3 +1,4 @@
+import { auditedWrite } from "@/lib/audited-write";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
@@ -30,11 +31,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const newCourse = await prisma.course.create({
+    const newCourse = await auditedWrite("COURSE", undefined, tx => tx.course.create({
       data: {
         name: name.trim(),
       },
-    });
+    }));
 
     return NextResponse.json(newCourse, { status: 201 });
   } catch (error) {

@@ -1,5 +1,7 @@
 export const dynamic = "force-dynamic";
 
+import { audit } from "@/lib/audit";
+import { saleDuplicates, PossibleDuplicate } from "@/lib/duplicates";
 import { currentUser } from "@/lib/current-user";
 import { assignedSalesperson } from "@/lib/assigned-salesperson";
 import { NextResponse } from "next/server";
@@ -19,7 +21,7 @@ export async function GET(req: Request) {
     const end = new Date(year, month, 1);
 
     const sales = await prisma.certificateSale.findMany({
-      where: {
+      where: { deletedAt: null,
         saleDate: { gte: start, lt: end },
       },
       include: {
@@ -42,6 +44,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const actor = await currentUser();
+    if (!actor) return NextResponse.json({ error: "Debes iniciar sesión" }, { status: 401 });
     const body = await req.json();
     const { requestedInvoiceDate, ...data } = saleInput(body);
     // Create the agenda copy atomically, so retries cannot leave a half-saved sale.
@@ -51,12 +54,16 @@ export async function POST(req: Request) {
       correlativeCode: body.correlativeCode
     }) : null;
     const created = await prisma.$transaction(async tx => {
+      const duplicates = await saleDuplicates(tx, data.customerName, data.courseId, data.saleDate);
+      if (duplicates.length && body.allowDuplicate !== true) throw new PossibleDuplicate(duplicates);
       const salespersonId = await assignedSalesperson(tx, actor?.id);
       const sale = await tx.certificateSale.create({ data: { ...data, salespersonId, invoicedAt: invoiceDateFor(data.status, requestedInvoiceDate) } });
       if (scheduled) {
         const { dates: _dates, sessions, courseIds, requestedInvoiceDate: _invoice, ...service } = scheduled;
-        await tx.service.create({ data: { ...service, salespersonId, courses: { connect: courseIds.map(id => ({ id })) }, dates: { create: sessions } } });
+        const copy = await tx.service.create({ data: { ...service, salespersonId, courses: { connect: courseIds.map(id => ({ id })) }, dates: { create: sessions } }, include: { courses: true, dates: true } });
+        await audit(tx, actor, "SERVICE", "CREATE", null, copy);
       }
+      await audit(tx, actor, "CERTIFICATE", "CREATE", null, sale);
       return sale;
     });
     return NextResponse.json(created, { status: 201 });

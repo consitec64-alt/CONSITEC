@@ -1,3 +1,6 @@
+import { removeCatalog } from "@/lib/audited-write";
+import { recordError } from "@/lib/record-error";
+import { auditedWrite } from "@/lib/audited-write";
 export const dynamic = "force-dynamic";
 
 import { adminOnly } from "@/lib/admin-only";
@@ -14,7 +17,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
   try {
     const { id } = await params;
-    const updated = await prisma.salesperson.update({ where: { id }, data: { color: body.color.toLowerCase() } });
+    const updated = await auditedWrite("SALESPERSON", id, tx => tx.salesperson.update({ where: { id }, data: { color: body.color.toLowerCase() } }));
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
@@ -24,30 +27,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const denied = await adminOnly(); if (denied) return denied;
-  try {
-    const id = (await params).id;
-
-    await prisma.service.deleteMany({
-      where: { salespersonId: id }
-    });
-
-    await prisma.certificateSale.deleteMany({
-      where: { salespersonId: id }
-    });
-
-    await prisma.salesperson.delete({
-      where: { id }
-    });
-
-    return NextResponse.json({ message: "Salesperson eliminado" });
-
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ message: "Error eliminando" }, { status: 500 });
-  }
+  try { await removeCatalog("SALESPERSON", (await params).id); return NextResponse.json({ message: "Registro eliminado" }); }
+  catch (error) { return recordError(error); }
 }

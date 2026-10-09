@@ -90,6 +90,8 @@ model Location {
 }
 
 model Service {
+  deletedAt DateTime?
+  @@index([deletedAt])
   id               String        @id @default(cuid())
   company          String
   correlativeCode  String?
@@ -120,6 +122,8 @@ model Service {
 }
 
 model CertificateSale {
+  deletedAt DateTime?
+  @@index([deletedAt])
   id            String        @id @default(cuid())
   customerName  String
   customerType  CustomerType
@@ -149,4 +153,20 @@ model ServiceDay {
 
   @@unique([serviceId, date])
   @@index([date])
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+  createdAt DateTime @default(now())
+  actorId String
+  actorName String
+  entity String
+  recordId String
+  label String
+  action String
+  salespersonId String?
+  before Json?
+  after Json?
+  @@index([createdAt])
+  @@index([salespersonId, createdAt])
 }

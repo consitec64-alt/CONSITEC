@@ -11,6 +11,7 @@ const prisma = new PrismaClient();
 const password = randomUUID();
 const fixture = await prisma.user.create({ data: { username: 'smoke-'+randomUUID(), password: await bcrypt.hash(password,12), role: 'ADMIN', salespersonId: (await prisma.salesperson.findFirstOrThrow()).id } });
 const username = fixture.username;
+const created = [];
 try {
 if (!password) throw new Error('Set SMOKE_PASSWORD (or ADMIN_PASSWORD) for an isolated test database');
 const api = (path, options = {}) => fetch(new URL(path, base), { redirect: 'manual', ...options });
@@ -48,7 +49,7 @@ assert(courses.length >= 4);
 const reps = await (await api('/api/metadata/salespeople', { headers })).json();
 const before = await (await api(`/api/dashboard?${period}`, { headers })).json();
 assert(Number.isFinite(before.totalServices));
-const created = [];
+
 try {
   const serviceResponse = await api('/api/services', { ...json({ company: 'Vercel smoke test', correlativeCode: '0042', courseId: courses[0].id, salespersonId: reps[0].id, instructorId: null, locationId: null, certificatesOnly: false, amount: 125.50, serviceDate: '2026-10-06T09:00:00.000Z', status: 'SCHEDULED' }), headers: { ...headers, 'Content-Type': 'application/json' } });
   assert.equal(serviceResponse.status, 201);
@@ -72,4 +73,4 @@ assert.match(logout.headers.get('set-cookie'), /consitec_session=;/);
 assert.equal((await api('/api/metadata/courses')).status, 401);
 console.log('Smoke passed: authentication, protected pages/APIs, middleware bypass, CSRF, cookies, PostgreSQL reads/writes, dashboard totals, and logout.');
 
-} finally { await prisma.user.deleteMany({where:{id:fixture.id}}); await prisma.$disconnect(); }
+} finally { for (const path of created) { const id = path.split("/").pop(); if (path.startsWith("/api/services/")) await prisma.service.deleteMany({where:{id}}); else await prisma.certificateSale.deleteMany({where:{id}}); } await prisma.auditLog.deleteMany({where:{actorId:fixture.id}}); await prisma.user.deleteMany({where:{id:fixture.id}}); await prisma.$disconnect(); }

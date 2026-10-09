@@ -16,7 +16,7 @@ export async function middleware(req: NextRequest) {
       }
     }
   }
-  if (req.nextUrl.pathname === "/api/auth/login") return NextResponse.next();
+  if (req.nextUrl.pathname === "/api/auth/login" || req.nextUrl.pathname === "/api/maintenance/trash") return NextResponse.next();
   const session = await getSession(req.cookies.get(SESSION_COOKIE)?.value);
   let user = null;
   if (session) {

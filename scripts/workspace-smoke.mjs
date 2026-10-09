@@ -67,7 +67,7 @@ try {
  assert.equal((await dashboard(11)).totalInvoicedBilling,beforeNovember.totalInvoicedBilling);
  assert.equal((await api(`/api/certificate-sales/${sale.id}`,'PATCH',{...saleBody,status:'PAID'})).status,400);
  assert.equal((await api('/api/certificate-sales','POST',{...saleBody,amount:10,status:'PAID'})).status,400);
- await api(`/api/services/${first.id}`,'DELETE');assert.equal(await db.serviceDay.count({where:{serviceId:first.id}}),0);
+ const savedDays=await db.serviceDay.findMany({where:{serviceId:first.id},orderBy:{date:"asc"}});await api(`/api/services/${first.id}`,'DELETE');assert.deepEqual(await db.serviceDay.findMany({where:{serviceId:first.id},orderBy:{date:"asc"}}),savedDays);assert((await db.service.findUnique({where:{id:first.id}})).deletedAt);
  console.log(`Workspace smoke passed: ${checks} requests; instructor details, strict codes, optional travel, multiple dates, atomic booking races, invoice-month accounting, preserved invoice dates, certificates and retired Paid state.`);
 } finally {
  if(rep){await db.service.deleteMany({where:{salespersonId:rep.id}});await db.certificateSale.deleteMany({where:{salespersonId:rep.id}});await db.salesperson.delete({where:{id:rep.id}});}

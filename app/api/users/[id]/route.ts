@@ -1,3 +1,4 @@
+import { audit } from "@/lib/audit";
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { currentUser } from "@/lib/current-user";
@@ -27,6 +28,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
         return { status: 409, body: { error: "Debe quedar al menos un administrador" } };
       }
       await tx.user.delete({ where: { id } });
+      await audit(tx, actor, "USER", "DELETE", target, null);
       return { status: 200, body: { success: true } };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     return response(result.body, result.status);

@@ -1,27 +1,12 @@
+import { removeCatalog } from "@/lib/audited-write";
+import { recordError } from "@/lib/record-error";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const id = (await params).id;
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
 
-    await prisma.service.deleteMany({
-      where: { locationId: id }
-    });
-
-    await prisma.location.delete({
-      where: { id }
-    });
-
-    return NextResponse.json({ message: "Location eliminada" });
-
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ message: "Error eliminando" }, { status: 500 });
-  }
+  try { await removeCatalog("LOCATION", (await params).id); return NextResponse.json({ message: "Registro eliminado" }); }
+  catch (error) { return recordError(error); }
 }

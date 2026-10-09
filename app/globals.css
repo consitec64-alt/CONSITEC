@@ -161,3 +161,4 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 .instructor-documents-link{display:inline-flex;align-items:center;gap:7px;color:var(--blue);font-size:11px;line-height:1.5;text-decoration:underline;text-underline-offset:3px;white-space:normal;overflow-wrap:anywhere}
 .instructor-documents-link svg{flex-shrink:0}.sctr-card>.instructor-documents-link{margin-bottom:18px}
 @media(max-width:760px){.instructor-list,.sctr-list{max-height:320px}}
+.history-entry{margin:14px 0;border:1px solid var(--border);border-radius:10px;padding:14px}.history-entry summary{cursor:pointer;display:grid;gap:7px}.history-entry table td{white-space:normal;min-width:150px;max-width:380px;overflow-wrap:anywhere}.history-pagination{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap}.history-panel>.search-box{margin-bottom:18px}.trash-panel>.section-heading{align-items:flex-start;flex-wrap:wrap}
