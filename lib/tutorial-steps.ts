@@ -6,7 +6,7 @@ const sale = (target: string, title: string, text: string) => step("certificates
 const instructor = (target: string, title: string, text: string) => step("support", `.instructor-card > .instructor-details:last-child ${target}`, title, text, { detail: true });
 export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
   const items = [
-    step("summary", "nav", "Tu espacio de trabajo", "Los iconos del menú abren cada apartado. El tutorial irá mostrando las vistas y sus controles. Los formularios se abren como demostración: este recorrido no guarda ventas ni modifica datos."),
+    step("summary", "nav", "Tu espacio de trabajo", "Al iniciar sesión, la bienvenida muestra el comercial asignado a tu cuenta y abre el panel automáticamente; también puedes pulsar Entrar al panel. Los iconos del menú abren cada apartado. El tutorial irá mostrando las vistas y sus controles. Los formularios se abren como demostración: este recorrido no guarda ventas ni modifica datos."),
     step("summary", ".period-picker", "Mes y año", "Elige el mes y el año o usa las flechas para consultar el período anterior o siguiente. Los indicadores y tablas se actualizan para esa selección."),
     step("summary", ".billing-metrics", "Indicadores del mes", "Consulta jornadas, facturación estimada, total facturado, comercial destacado y curso más vendido. Los clientes únicos aparecen junto al contador de servicios y certificados, aunque repitan compras."),
     step("summary", ".period-hint", "Servicios, certificados y clientes", "Cada fecha de clase cuenta como un servicio. Los certificados tienen su propio contador; un mismo cliente cuenta una sola vez dentro del mes."),
