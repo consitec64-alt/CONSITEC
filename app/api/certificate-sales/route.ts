@@ -1,3 +1,4 @@
+import { assertMonthsOpen } from '@/lib/monthly-close';
 export const dynamic = "force-dynamic";
 
 import { audit } from "@/lib/audit";
@@ -54,10 +55,12 @@ export async function POST(req: Request) {
       correlativeCode: body.correlativeCode
     }) : null;
     const created = await prisma.$transaction(async tx => {
+      const invoicedAt = invoiceDateFor(data.status, requestedInvoiceDate);
+      await assertMonthsOpen(tx, {...data,invoicedAt});
       const duplicates = await saleDuplicates(tx, data.customerName, data.courseId, data.saleDate);
       if (duplicates.length && body.allowDuplicate !== true) throw new PossibleDuplicate(duplicates);
       const salespersonId = await assignedSalesperson(tx, actor?.id);
-      const sale = await tx.certificateSale.create({ data: { ...data, salespersonId, invoicedAt: invoiceDateFor(data.status, requestedInvoiceDate) } });
+      const sale = await tx.certificateSale.create({ data: { ...data, salespersonId, invoicedAt } });
       if (scheduled) {
         const { dates: _dates, sessions, courseIds, requestedInvoiceDate: _invoice, ...service } = scheduled;
         const copy = await tx.service.create({ data: { ...service, salespersonId, courses: { connect: courseIds.map(id => ({ id })) }, dates: { create: sessions } }, include: { courses: true, dates: true } });

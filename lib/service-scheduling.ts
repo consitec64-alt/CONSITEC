@@ -1,3 +1,4 @@
+import { assertMonthsOpen } from '@/lib/monthly-close';
 import { audit } from "@/lib/audit";
 import { currentUser } from "@/lib/current-user";
 import { serviceDuplicates, PossibleDuplicate } from "@/lib/duplicates";
@@ -30,6 +31,7 @@ export async function writeService(body: Record<string, unknown>, id?: string, u
     const salespersonId = existing?.salespersonId ?? await assignedSalesperson(tx, userId);
     const duplicates = await serviceDuplicates(tx, data.company, courseIds, dates, id);
     const invoicedAt = invoiceDateFor(data.status, requestedInvoiceDate, existing);
+    await assertMonthsOpen(tx, existing, { ...data, dates: sessions, invoicedAt });
     if (data.instructorId) {
       // Serialize bookings for this instructor before checking every selected day.
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${data.instructorId}))::text`;

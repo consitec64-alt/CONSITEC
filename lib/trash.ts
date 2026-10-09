@@ -1,3 +1,4 @@
+import { assertMonthsOpen } from '@/lib/monthly-close';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { audit, type Actor } from '@/lib/audit';
@@ -15,10 +16,12 @@ export async function trashRecord(entity: string, id: string, actor: Actor) {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))::text`;
     if (entity === 'SERVICE') {
       const before = await tx.service.findUniqueOrThrow({ where: { id, deletedAt: null }, include: serviceInclude });
+      await assertMonthsOpen(tx,before);
       const after = await tx.service.update({ where: { id, deletedAt: null }, data: { deletedAt: new Date() }, include: serviceInclude });
       await audit(tx, actor, entity, 'TRASH', before, after);
     } else {
       const before = await tx.certificateSale.findUniqueOrThrow({ where: { id, deletedAt: null }, include: { course: true, salesperson: true } });
+      await assertMonthsOpen(tx,before);
       const after = await tx.certificateSale.update({ where: { id, deletedAt: null }, data: { deletedAt: new Date() }, include: { course: true, salesperson: true } });
       await audit(tx, actor, entity, 'TRASH', before, after);
     }
@@ -32,6 +35,7 @@ export async function restoreRecord(entity: string, id: string, actor: Actor) {
     const where = { id, ...owner, deletedAt: { gt: expiredBefore() } };
     if (entity === 'SERVICE') {
       const before = await tx.service.findFirstOrThrow({ where, include: serviceInclude });
+      await assertMonthsOpen(tx,before);
       if (before.instructorId) {
         await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${before.instructorId}))::text`;
         const conflict = await tx.service.findFirst({ where: { ...datesWhere(before.dates.length ? before.dates.map(d => d.date) : [before.serviceDate]), instructorId: before.instructorId } });
@@ -41,6 +45,7 @@ export async function restoreRecord(entity: string, id: string, actor: Actor) {
       await audit(tx, actor, entity, 'RESTORE', before, after); return after;
     }
     const before = await tx.certificateSale.findFirstOrThrow({ where, include: { course: true, salesperson: true } });
+    await assertMonthsOpen(tx,before);
     const after = await tx.certificateSale.update({ where: { id }, data: { deletedAt: null }, include: { course: true, salesperson: true } });
     await audit(tx, actor, entity, 'RESTORE', before, after); return after;
   });
