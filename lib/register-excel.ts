@@ -3,7 +3,7 @@ import { InstructorRegisterRow, registerDate, registerMonth } from '@/lib/instru
 
 // Small standards-based XLSX: typed cells, one sheet, no formulas or external links.
 const xml = (text: string) => text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-export function registerWorkbook(rows: InstructorRegisterRow[], confirmations: Set<string>) {
+export function registerWorkbook(rows: InstructorRegisterRow[], confirmations: Set<string> = new Set(rows.filter(row => row.confirmed).map(row => row.id))) {
   const headers = ['Mes', 'Fecha', 'Instructor', 'Empresa', 'Curso(s)', 'Modalidad', 'Lugar', 'Horas de clase', 'Confirmación'];
   const values: (string | number | boolean | null)[][] = [headers, ...rows.map(r => [registerMonth(r.date), registerDate(r.date), r.instructor, r.company, r.courses.join('; '), r.modality, r.location, r.instructionalMinutes === null ? null : r.instructionalMinutes / 60, confirmations.has(r.id)])];
   const sheetRows = values.map((row, index) => `<row r="${index + 1}">${row.map((value, column) => {

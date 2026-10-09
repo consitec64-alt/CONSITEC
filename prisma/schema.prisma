@@ -117,6 +117,7 @@ model Service {
   travelMode       TravelMode @default(NONE)
   modality         ClassModality?
   dates            ServiceDay[]
+  registerConfirmations InstructorConfirmation[]
   amount           Decimal       @db.Decimal(10, 2)
   serviceDate      DateTime
   certificatesOnly Boolean       @default(false)
@@ -139,6 +140,18 @@ model Service {
 
   @@index([serviceDate])
   @@index([invoicedAt])
+}
+
+model InstructorConfirmation {
+  serviceId String
+  date String @db.VarChar(10)
+  instructorId String
+  confirmed Boolean @default(false)
+  updatedBy String
+  updatedAt DateTime @default(now()) @updatedAt
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([serviceId, date, instructorId])
 }
 
 model CertificateSale {

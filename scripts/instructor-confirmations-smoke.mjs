@@ -1,0 +1,33 @@
+import {PrismaClient} from '@prisma/client';
+import bcrypt from 'bcrypt';
+import {readFileSync} from 'node:fs';
+import {parseEnv} from 'node:util';
+import assert from 'node:assert/strict';
+const env=parseEnv(readFileSync(new URL('../.env',import.meta.url),'utf8')),base=process.env.SMOKE_BASE_URL||'http://127.0.0.1:3077';
+assert.equal(new URL(env.DATABASE_URL).hostname,'localhost');assert(['localhost','127.0.0.1'].includes(new URL(base).hostname),'Local application only');
+const db=new PrismaClient({datasources:{db:{url:env.DATABASE_URL}}}),tag='confirmation-'+Date.now(),password=crypto.randomUUID(),ids=[],serviceIds=[];let rep,course,instructors=[],checks=0;
+async function api(path,cookie,method='GET',body,status=200){const r=await fetch(base+path,{method,headers:{...(cookie?{Cookie:cookie}:{}),'Content-Type':'application/json'},...(body!==undefined?{body:JSON.stringify(body)}:{})});const data=await r.json();assert.equal(r.status,status,`${path}: ${data.error||''}`);checks++;return {data,cookie:r.headers.get('set-cookie')?.split(';')[0]};}
+try{
+ rep=await db.salesperson.create({data:{name:tag}});course=await db.course.create({data:{name:tag}});instructors=await Promise.all(['A','B'].map(s=>db.instructor.create({data:{name:tag+s}})));const hash=await bcrypt.hash(password,10);
+ const users=await Promise.all(['ADMIN','SALES','SALES','SUPERVISOR'].map((role,i)=>db.user.create({data:{username:tag+i,password:hash,role,salespersonId:role==='SALES'?rep.id:null,tutorialCompleted:true}})));ids.push(...users.map(u=>u.id));const [admin,seller,other,supervisor]=await Promise.all(users.map(async u=>(await api('/api/auth/login',null,'POST',{username:u.username,password})).cookie));
+ const body={company:tag,correlativeCode:'0911',amount:1000,courseIds:[course.id],instructorIds:instructors.map(i=>i.id),certificatesOnly:false,modality:'VIRTUAL',status:'SCHEDULED',sessions:[{date:'2099-10-05',startTime:'09:00',endTime:'15:00'},{date:'2099-10-06',startTime:'10:00',endTime:'16:00'}]};
+ const service=(await api('/api/services',seller,'POST',body,201)).data;serviceIds.push(service.id);
+ const endpoint='/api/instructor-register?year=2099&month=10&company='+encodeURIComponent(tag);
+ for(const [cookie,canConfirm,manage] of [[admin,true,true],[seller,true,false],[supervisor,false,false]]){const d=(await api(endpoint,cookie)).data;assert.equal(d.rows.length,4);assert.equal(d.canConfirm,canConfirm);assert.equal(d.canManageConfirmations,manage);assert(d.rows.every(r=>!r.confirmed&&r.serviceId===service.id&&instructors.some(i=>i.id===r.instructorId)));}
+ const confirmation={serviceId:service.id,date:'2099-10-05',instructorId:instructors[0].id,confirmed:true};
+ await api('/api/instructor-register',seller,'PATCH',confirmation);
+ for(const cookie of [admin,other,supervisor]){const rows=(await api(endpoint,cookie)).data.rows;assert.equal(rows.filter(r=>r.confirmed).length,1);assert(rows.find(r=>r.date===confirmation.date&&r.instructorId===confirmation.instructorId).confirmed);}
+ await api('/api/instructor-register',seller,'PATCH',{...confirmation,confirmed:false},403);await api('/api/instructor-register',other,'PATCH',{...confirmation,confirmed:false},403);await api('/api/instructor-register',supervisor,'PATCH',confirmation,403);await api('/api/instructor-register',null,'PATCH',confirmation,401);
+ await api('/api/instructor-register',admin,'PATCH',{...confirmation,confirmed:false});assert.equal((await api(endpoint,seller)).data.rows.filter(r=>r.confirmed).length,0);
+ await Promise.all([seller,other].map(cookie=>api('/api/instructor-register',cookie,'PATCH',confirmation)));assert.equal(await db.instructorConfirmation.count({where:{serviceId:service.id,confirmed:true}}),1);assert.equal(await db.auditLog.count({where:{entity:'INSTRUCTOR_CONFIRMATION',recordId:`${service.id}:${confirmation.date}:${confirmation.instructorId}`,action:'CONFIRM'}}),2,'Concurrent/idempotent confirmations must not create duplicate history');
+ // Editing replaces ServiceDay rows; confirmation keys must survive that replacement.
+ await api('/api/services/'+service.id,admin,'PATCH',{...body,amount:1500});assert.equal((await api(endpoint,seller)).data.rows.filter(r=>r.confirmed).length,1);
+ await api('/api/services/'+service.id,seller,'DELETE');assert.equal((await api(endpoint,admin)).data.rows.length,0);await api('/api/instructor-register',admin,'PATCH',confirmation,404);await api('/api/trash',seller,'POST',{entity:'SERVICE',id:service.id});assert.equal((await api(endpoint,other)).data.rows.filter(r=>r.confirmed).length,1);
+ for(const invalid of [null,{}, {...confirmation,confirmed:'true'},{...confirmation,date:'2099-02-30'},{...confirmation,date:'2099-10-07'},{...confirmation,instructorId:'missing'}])await api('/api/instructor-register',admin,'PATCH',invalid,400);
+ await api('/api/instructor-register',admin,'PATCH',{...confirmation,serviceId:'missing'},404);
+ const certificate=await db.service.create({data:{company:tag+' certificate',amount:100,courseId:course.id,salespersonId:rep.id,serviceDate:new Date('2099-10-05'),certificatesOnly:true}});serviceIds.push(certificate.id);await api('/api/instructor-register',admin,'PATCH',{...confirmation,serviceId:certificate.id,instructorId:'unassigned'},400);
+ const legacy=await db.service.create({data:{company:tag+' legacy',amount:100,courseId:course.id,salespersonId:rep.id,serviceDate:new Date('2099-10-12')}});serviceIds.push(legacy.id);await api('/api/instructor-register',seller,'PATCH',{serviceId:legacy.id,date:'2099-10-12',instructorId:'unassigned',confirmed:true});assert((await api(endpoint,seller)).data.rows.find(r=>r.serviceId===legacy.id).confirmed);
+ const records=await db.auditLog.findMany({where:{entity:'INSTRUCTOR_CONFIRMATION',actorId:{in:ids}}});assert(records.some(r=>r.action==='UNCONFIRM'));assert(records.every(r=>r.before&&r.after&&r.salespersonId===rep.id));assert(!JSON.stringify(records).includes(password));
+ await db.service.delete({where:{id:service.id}});assert.equal(await db.instructorConfirmation.count({where:{serviceId:service.id}}),0,'Final service deletion must clean up confirmations');
+ console.log(`PASS ${checks} HTTP checks: durable independent date/instructor confirmations, admin-only removal, supervisor/read authentication, idempotent concurrent writes, audit, edits/trash/recovery, invalid rows, legacy services and final cleanup.`);
+}finally{await db.service.deleteMany({where:{id:{in:serviceIds}}});await db.auditLog.deleteMany({where:{actorId:{in:ids}}});await db.user.deleteMany({where:{id:{in:ids}}});await db.instructor.deleteMany({where:{id:{in:instructors.map(i=>i.id)}}});if(rep)await db.salesperson.delete({where:{id:rep.id}});if(course)await db.course.delete({where:{id:course.id}});await db.$disconnect();}
