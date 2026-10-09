@@ -1,3 +1,6 @@
+import { audit } from "@/lib/audit";
+import { currentUser } from "@/lib/current-user";
+import { serviceDuplicates, PossibleDuplicate } from "@/lib/duplicates";
 import { assignedSalesperson } from "@/lib/assigned-salesperson";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -6,10 +9,10 @@ import { serviceInput, InvalidRecord } from "@/lib/record-input";
 
 export const serviceInclude = { course: true, courses: { orderBy: { name: "asc" as const } }, instructor: true, location: true, salesperson: true, dates: { orderBy: { date: "asc" as const } } };
 export function agendaWhere(start: Date, end: Date): Prisma.ServiceWhereInput {
-  return { OR: [{ serviceDate: { gte: start, lt: end } }, { dates: { some: { date: { gte: start, lt: end } } } }] };
+  return { deletedAt: null, OR: [{ serviceDate: { gte: start, lt: end } }, { dates: { some: { date: { gte: start, lt: end } } } }] };
 }
 export function datesWhere(days: Date[]): Prisma.ServiceWhereInput {
-  return { OR: days.flatMap(day => {
+  return { deletedAt: null, OR: days.flatMap(day => {
     const start = new Date(day.toISOString().slice(0, 10) + "T00:00:00.000Z");
     const end = new Date(start.getTime() + 86400000);
     return [{ serviceDate: { gte: start, lt: end } }, { dates: { some: { date: { gte: start, lt: end } } } }];
@@ -17,12 +20,15 @@ export function datesWhere(days: Date[]): Prisma.ServiceWhereInput {
 }
 export class InstructorUnavailable extends Error {}
 export async function writeService(body: Record<string, unknown>, id?: string, userId?: string) {
+  const actor = await currentUser();
+  if (!actor) throw new InvalidRecord("Debes iniciar sesión");
   const { dates, sessions, courseIds, requestedInvoiceDate, ...data } = serviceInput(body);
   return prisma.$transaction(async tx => {
     if (id) await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))::text`;
-    const existing = id ? await tx.service.findUniqueOrThrow({ where: { id } }) : undefined;
+    const existing = id ? await tx.service.findUniqueOrThrow({ where: { id, deletedAt: null }, include: serviceInclude }) : undefined;
     if (await tx.course.count({ where: { id: { in: courseIds } } }) !== courseIds.length) throw new InvalidRecord("Uno de los cursos seleccionados ya no existe");
     const salespersonId = existing?.salespersonId ?? await assignedSalesperson(tx, userId);
+    const duplicates = await serviceDuplicates(tx, data.company, courseIds, dates, id);
     const invoicedAt = invoiceDateFor(data.status, requestedInvoiceDate, existing);
     if (data.instructorId) {
       // Serialize bookings for this instructor before checking every selected day.
@@ -37,7 +43,10 @@ export async function writeService(body: Record<string, unknown>, id?: string, u
         throw new InstructorUnavailable(`${conflict.instructor?.name || "El instructor"} no está disponible para la fecha: ${occupied}`);
       }
     }
-    if (id) return tx.service.update({ where: { id }, data: { ...data, salespersonId, invoicedAt, courses: { set: courseIds.map(id => ({ id })) }, dates: { deleteMany: {}, create: sessions } }, include: serviceInclude });
-    return tx.service.create({ data: { ...data, salespersonId, invoicedAt, courses: { connect: courseIds.map(id => ({ id })) }, dates: { create: sessions } }, include: serviceInclude });
+    if (duplicates.length && body.allowDuplicate !== true) throw new PossibleDuplicate(duplicates);
+    const saved = id ? await tx.service.update({ where: { id }, data: { ...data, salespersonId, invoicedAt, courses: { set: courseIds.map(id => ({ id })) }, dates: { deleteMany: {}, create: sessions } }, include: serviceInclude })
+    : await tx.service.create({ data: { ...data, salespersonId, invoicedAt, courses: { connect: courseIds.map(id => ({ id })) }, dates: { create: sessions } }, include: serviceInclude });
+    await audit(tx, actor, "SERVICE", id ? "UPDATE" : "CREATE", existing, saved);
+    return saved;
   });
 }

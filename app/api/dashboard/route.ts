@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     });
 
     const certificateSales = await prisma.certificateSale.findMany({
-      where: { saleDate: { gte: start, lt: end } },
+      where: { deletedAt: null, saleDate: { gte: start, lt: end } },
       include: { salesperson: true }
     });
     const customerKey = (name: string) => name.trim().replace(/\s+/g, " ").toLocaleLowerCase("es-PE");
@@ -37,8 +37,8 @@ export async function GET(req: Request) {
     // Certificate-only agenda entries are scheduling copies; certificate revenue
     // is counted from company certificate sales, never from those copies.
     const [invoicedServices, invoicedCertificates] = await Promise.all([
-      prisma.service.findMany({ where: { status: "INVOICED", certificatesOnly: false, invoicedAt: { gte: start, lt: end } }, include: { salesperson: true, course: true, courses: true, instructor: true, location: true, dates: true } }),
-      prisma.certificateSale.findMany({ where: { status: "INVOICED", customerType: "COMPANY", invoicedAt: { gte: start, lt: end } }, include: { salesperson: true } })
+      prisma.service.findMany({ where: { deletedAt: null, status: "INVOICED", certificatesOnly: false, invoicedAt: { gte: start, lt: end } }, include: { salesperson: true, course: true, courses: true, instructor: true, location: true, dates: true } }),
+      prisma.certificateSale.findMany({ where: { deletedAt: null, status: "INVOICED", customerType: "COMPANY", invoicedAt: { gte: start, lt: end } }, include: { salesperson: true } })
     ]);
     const invoiced = [...invoicedServices, ...invoicedCertificates];
     const monthlyServices = [...new Map([...services, ...invoicedServices].map(s => [s.id, s])).values()];

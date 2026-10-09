@@ -1,3 +1,4 @@
+import { auditedWrite } from "@/lib/audited-write";
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import bcrypt from "bcrypt";
@@ -44,9 +45,9 @@ export async function POST(req: Request) {
     if (role !== "ADMIN" && role !== "SALES") return response({ error: "Selecciona un rol válido" }, 400);
     if (typeof salespersonId !== "string" || !salespersonId || !await prisma.salesperson.findUnique({ where: { id: salespersonId } })) return response({ error: "Selecciona un comercial existente para esta cuenta" }, 400);
     const hashed = await bcrypt.hash(password, 12);
-    const user = await prisma.user.create({
+    const user = await auditedWrite("USER", undefined, tx => tx.user.create({
       data: { username, password: hashed, role, salespersonId }, select: fields
-    });
+    }));
     return response(user, 201);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -68,7 +69,7 @@ export async function PATCH(req: Request) {
       return response({ error: "Selecciona una cuenta e ingresa un correo electrónico válido" }, 400);
     }
     if (salespersonId !== undefined && (typeof salespersonId !== "string" || !salespersonId || !await prisma.salesperson.findUnique({ where: { id: salespersonId } }))) return response({ error: "Selecciona un comercial existente para esta cuenta" }, 400);
-    return response(await prisma.user.update({ where: { id }, data: { ...(username ? { username } : {}), ...(salespersonId !== undefined ? { salespersonId } : {}) }, select: fields }));
+    return response(await auditedWrite("USER", id, tx => tx.user.update({ where: { id }, data: { ...(username ? { username } : {}), ...(salespersonId !== undefined ? { salespersonId } : {}) }, select: fields })));
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") return response({ error: "Ese correo electrónico ya está registrado" }, 409);

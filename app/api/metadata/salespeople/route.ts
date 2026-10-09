@@ -1,3 +1,4 @@
+import { auditedWrite } from "@/lib/audited-write";
 export const dynamic = "force-dynamic";
 
 import { adminOnly } from "@/lib/admin-only";
@@ -20,9 +21,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Name requerido" }, { status: 400 });
   }
 
-  const created = await prisma.salesperson.create({
+  const created = await auditedWrite("SALESPERSON", undefined, tx => tx.salesperson.create({
     data: { name: name.trim() }
-  });
+  }));
 
   return NextResponse.json(created, { status: 201 });
 }

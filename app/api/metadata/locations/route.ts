@@ -1,3 +1,4 @@
+import { auditedWrite } from "@/lib/audited-write";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
@@ -37,12 +38,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const newLocation = await prisma.location.create({
+    const newLocation = await auditedWrite("LOCATION", undefined, tx => tx.location.create({
       data: {
         department: department.trim(),
         district: district.trim(),
       },
-    });
+    }));
 
     return NextResponse.json(newLocation, { status: 201 });
   } catch (error) {

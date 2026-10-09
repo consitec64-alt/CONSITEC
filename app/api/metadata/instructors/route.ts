@@ -1,3 +1,4 @@
+import { auditedWrite } from "@/lib/audited-write";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
@@ -22,6 +23,6 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  try { const { courses, ...data } = instructorInput(await req.json()); return NextResponse.json(await prisma.instructor.create({ data: { ...data, ...(courses ? { courses: { connect: courses.set } } : {}) }, include: { courses: true } }), { status: 201 }); }
+  try { const { courses, ...data } = instructorInput(await req.json()); return NextResponse.json(await auditedWrite("INSTRUCTOR", undefined, tx => tx.instructor.create({ data: { ...data, ...(courses ? { courses: { connect: courses.set } } : {}) }, include: { courses: true } })), { status: 201 }); }
   catch (error) { return recordError(error); }
 }

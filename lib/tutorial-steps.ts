@@ -1,4 +1,4 @@
-export type TutorialStep = { tab: string; target: string; title: string; text: string; form?: "service" | "sale"; admin?: boolean; detail?: boolean; confirmation?: boolean };
+export type TutorialStep = { tab: string; target: string; title: string; text: string; form?: "service" | "sale"; admin?: boolean; detail?: boolean; confirmation?: boolean; preview?: "duplicate" };
 const field = (name: string) => `.modal-overlay [name="${name}"]`;
 const step = (tab: string, target: string, title: string, text: string, extra: Partial<TutorialStep> = {}): TutorialStep => ({ tab, target, title, text, ...extra });
 const service = (target: string, title: string, text: string) => step("services", target, title, text, { form: "service" });
@@ -13,11 +13,8 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     step("summary", ".chart-grid", "Gráficos de actividad", "Compara servicios por comercial y su distribución semanal. Las barras muestran cantidad de servicios, no importes."),
     step("summary", ".goals-panel, .goal-grid, .goal", "Metas mensuales", "Consulta el avance de las metas de servicios y de S/200,000. La meta de facturación cuenta únicamente servicios y certificados de empresas en estado Facturado, en su mes de facturación."),
     step("services", ".period-picker", "Agenda de servicios", "La agenda reúne las clases del mes. Los servicios con varias fechas aparecen en cada jornada, pero conservan un único importe."),
-    step("services", ".filter-bar", "Filtros de la agenda", "Busca por empresa, curso o comercial. Combina comercial y estado para acotar los resultados; limpiar la búsqueda vuelve a mostrar los registros del mes."),
-    step("services", '[aria-label="Buscar cliente, curso o comercial"]', "Buscar servicios", "Escribe parte del cliente, curso o comercial. La búsqueda se combina con los otros filtros."),
-    step("services", '[aria-label="Filtrar por comercial"]', "Filtrar por comercial", "Despliega la lista para elegir un comercial o ver todos."),
-    step("services", '[aria-label="Filtrar por estado"]', "Filtrar por estado", "Elige Programado, Ejecutado, Facturado o todos los estados."),
-    step("services", ".calendar, .calendar-grid", "Calendario y registros", "Las tarjetas muestran cliente, cursos, instructor, horario, importe y estado. El lápiz abre la edición; la papelera solicita confirmación antes de eliminar. Si hay varias tarjetas en un día, abre el día para verlas."),
+    step("services", ".filter-bar", "Búsqueda y filtros", "Este es el funcionamiento común de las barras de búsqueda y filtros: escribe parte del nombre, combina las opciones disponibles y usa Limpiar para volver a ver todos. En el Registro de instructores, pulsa Aplicar filtros para ejecutar la selección. Lo explicaremos una sola vez."),
+    step("services", ".calendar, .calendar-grid", "Calendario y registros", "Las tarjetas muestran cliente, cursos, instructor, horario, importe y estado. El lápiz abre la edición; la papelera permite retirar el registro de la vista activa. Si hay varias tarjetas en un día, abre el día para verlas."),
     step("services", ".page-heading > button", "Abrir Nuevo servicio", "Este botón abre el formulario de servicios. Ahora lo recorreremos campo por campo, sin guardar ningún registro."),
     service(field("company"), "Empresa / cliente", "Escribe el nombre o razón social del cliente. Usa una escritura consistente para que el contador de clientes únicos reconozca al mismo cliente."),
     service(field("correlativeCode"), "Código de correlativo", "Es obligatorio y debe contener exactamente cuatro dígitos numéricos. Por ejemplo, 0042. Se muestra en el registro y en el resumen mensual."),
@@ -37,13 +34,9 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     service(field("status"), "Estado del servicio", "Elige Programado, Ejecutado o Facturado. Solo Facturado suma para la meta mensual y los totales facturados."),
     service(field("certificatesOnly"), "Solo certificados", "Marca esta opción únicamente para registros de agenda correspondientes a certificados. Estas copias se excluyen del Registro de instructores y evitan duplicar la facturación."),
     service(".modal-overlay .dialog-actions", "Guardar, cancelar y editar", "Guardar registro valida los campos; Cancelar cierra la ventana. Después, el lápiz de una tarjeta permite editar y Guardar cambios. En esta demostración no se envía el formulario."),
-    step("services", ".tour-delete-preview", "Confirmar la eliminación del servicio", "La ventana identifica el registro que vas a eliminar. Cancelar lo conserva; Eliminar lo borra. Esta ventana es solo una demostración y no elimina datos.", { confirmation: true }),
+    step("services", ".tour-delete-preview", "Eliminar y recuperar registros", "Las papeleras piden confirmación antes de eliminar. Cancelar conserva el registro. Servicios y certificados pasan a Papelera durante siete días; cuentas y catálogos no se recuperan allí. Los catálogos vinculados a registros no se pueden eliminar para proteger sus datos. Explicaremos la eliminación una sola vez.", { confirmation: true }),
     step("certificates", ".sale-summary", "Totales de certificados", "Consulta los importes separados entre personas naturales y empresas, y el total de los registros filtrados."),
-    step("certificates", ".filter-bar", "Buscar y filtrar certificados", "Busca clientes o cursos y filtra por comercial o estado. Los totales superiores reflejan la selección visible."),
-    step("certificates", '[aria-label="Buscar cliente, curso o comercial"]', "Buscar ventas de certificados", "Busca por cliente, curso o comercial sin cambiar el mes seleccionado."),
-    step("certificates", '[aria-label="Filtrar por comercial"]', "Comercial de las ventas", "Selecciona un comercial para ver sus ventas de certificados."),
-    step("certificates", '[aria-label="Filtrar por estado"]', "Estado de las ventas", "Selecciona un estado para consultar únicamente ventas programadas, ejecutadas o facturadas."),
-    step("certificates", ".content-area .table-scroll", "Editar o eliminar una venta", "La tabla reúne cliente, tipo, comercial, importe, fecha y estado. El lápiz abre la edición y la papelera pide confirmación para eliminar."),
+    step("certificates", ".content-area .table-scroll", "Tabla de certificados", "La tabla reúne cliente, tipo, comercial, importe, fecha y estado. El lápiz permite corregir una venta existente."),
     step("certificates", ".page-heading > button", "Nueva venta", "Abre el formulario de certificados. Ahora mostraremos sus campos sin crear una venta."),
     sale(field("customerName"), "Nombre del cliente", "Escribe el nombre de la persona o la razón social de la empresa que compra los certificados."),
     sale(field("customerType"), "Tipo de cliente", "Elige Persona natural o Empresa. Únicamente certificados de empresas facturados cuentan para la meta mensual de facturación."),
@@ -55,12 +48,10 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     sale(field("correlativeCode"), "Correlativo para la agenda", "Este campo aparece al crear una venta mayor a S/700. Ingresa cuatro dígitos numéricos para identificar su copia en la agenda. Se muestra aquí como demostración."),
     sale(field("status"), "Estado de la venta", "Selecciona Programado, Ejecutado o Facturado. Cambiar el estado a Facturado activa el cómputo de facturación cuando el cliente es una empresa."),
     sale(".modal-overlay .dialog-actions", "Guardar o cancelar la venta", "Guarda cuando los datos estén completos. Para corregir una venta existente, usa el lápiz y Guarda cambios. La agenda se edita por separado. El tutorial cierra esta demostración sin guardar."),
-    step("certificates", ".tour-delete-preview", "Confirmar la eliminación de la venta", "Revisa el cliente de la venta antes de confirmar. Cancelar cierra la ventana sin eliminar. En este ejemplo no se realiza ninguna eliminación.", { confirmation: true }),
     step("performance", ".bottom-grid > .panel:first-child", "Avance semanal", "Compara servicios y facturación por comercial. El distintivo semanal aparece al superar cinco servicios."),
     step("performance", ".bottom-grid > .panel:nth-child(2)", "Ranking mensual", "El ranking ordena a los comerciales por cantidad de servicios. El color de cada barra se conserva para todo el equipo."),
     step("performance", ".commercial-colors", "Colores del ranking", "Elige el color junto al nombre y pulsa Guardar color. Este control está disponible únicamente para administradores.", { admin: true }),
     step("performance", ".monthly-summary", "Resumen por comercial", "Despliega el comercial para consultar correlativo, empresa, monto y estado. Cada fila agrupa las fechas del servicio y muestra su precio una sola vez."),
-    step("instructors", ".register-filters", "Filtros del Registro de instructores", "Selecciona instructor, empresa, curso, modalidad y rango de fechas dentro del mes. Aplicar filtros ejecuta la búsqueda; Limpiar filtros restaura la selección y la flecha recarga el registro."),
     ...[
       ["Instructor", "Elige un instructor o deja Todos los instructores."],
       ["Empresa", "Escribe parte del nombre de la empresa para buscar sus clases."],
@@ -69,11 +60,9 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
       ["Desde", "Selecciona la primera fecha del rango que quieres consultar dentro del mes."],
       ["Hasta", "Selecciona la última fecha del rango. Luego pulsa Aplicar filtros."]
     ].map(([title, text], i) => step("instructors", `.register-filters > label:nth-child(${i+1})`, title, text)),
-    step("instructors", ".register-filter-actions", "Aplicar, limpiar y actualizar", "Aplicar filtros usa la selección. Limpiar filtros borra las opciones elegidas. El botón de flecha recarga las filas desde la agenda."),
     step("instructors", ".instructor-register .table-scroll", "Clases y horas netas", "Cada fecha de la agenda genera una fila con mes, fecha, instructor, empresa, cursos, modalidad, lugar y horas netas. Los horarios históricos incompletos se muestran como Sin horario."),
     step("instructors", ".register-confirmation, .instructor-register th:last-child", "Confirmación", "Marca o desmarca la casilla de cada jornada manualmente. Es temporal: se borra al salir, cambiar de mes o recargar, y no cambia el servicio."),
     step("instructors", ".instructor-register .section-heading > button", "Exportar a Excel", "Descarga las filas filtradas en un archivo Excel, con las horas y confirmaciones actuales. El botón se habilita cuando hay filas cargadas y no existe un error."),
-    step("support", ".instructor-card .search-box", "Buscar instructores", "Busca por nombre o DNI. Despliega una ficha existente para ver sus datos o Agregar instructor para registrar una nueva."),
     instructor("summary", "Desplegar la ficha del instructor", "Esta ficha reúne información personal, cursos, EMO, SCTR y vehículo. Abrimos Agregar instructor como demostración para mostrar todos sus campos."),
     instructor('[name="name"]', "Nombre del instructor", "Indica el nombre del instructor. Al editar una ficha existente, se mantienen sus vínculos con los servicios."),
     instructor('[name="address"]', "Dirección", "Campo opcional de escritura libre para la dirección del instructor."),
@@ -84,27 +73,25 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     instructor(".car-details", "Desplegar Auto", "El apartado Auto es opcional. Despliega el cuadro para registrar modelo y placa."),
     instructor('[name="carModel"]', "Modelo del auto", "Escribe el modelo del vehículo del instructor. Puedes dejarlo vacío."),
     instructor('[name="carPlate"]', "Placa del auto", "Registra la placa del vehículo. Es un campo opcional de escritura libre."),
-    instructor("form > button", "Guardar la ficha", "Agregar instructor crea la ficha; en una ficha existente verás Guardar ficha y Eliminar instructor. La eliminación solicita confirmación. Aquí no guardamos la demostración."),
+    instructor("form > button", "Guardar la ficha", "Agregar instructor crea la ficha; en una ficha existente verás Guardar ficha y Eliminar instructor. Aquí no guardamos la demostración."),
     step("support", ".sctr-card", "Vigencias SCTR", "Solo aparecen instructores con SCTR marcado como Sí. Completa Desde y Hasta y pulsa Guardar vigencia. El apartado indica Vigente, Por iniciar, Vencido o Sin fechas registradas."),
     step("support", '.sctr-card [name=sctrStartsAt], .sctr-card', "Inicio del SCTR", "Desde indica el primer día de cobertura. El instructor debe tener SCTR marcado como Sí para que aparezcan estos campos."),
     step("support", '.sctr-card [name=sctrEndsAt], .sctr-card', "Fin del SCTR", "Hasta indica el último día de cobertura y no puede ser anterior al inicio."),
     step("support", '.sctr-card form > button, .sctr-card', "Guardar vigencia SCTR", "Guardar vigencia actualiza únicamente estas fechas. El estado se calcula según la fecha actual en Perú."),
-    step("support", '[data-tour="support-courses"]', "Catálogo de cursos", "Busca cursos, escribe un nombre y pulsa Agregar. Los cursos alimentan servicios, certificados y fichas de instructores. Eliminar un curso también elimina sus registros asociados: revisa la confirmación."),
-    step("support", '[data-tour="support-locations"]', "Ubicaciones", "Busca ubicaciones y agrega departamento y distrito. Eliminar una ubicación también elimina los servicios asociados; se solicita confirmación."),
+    step("support", '[data-tour="support-courses"]', "Catálogo de cursos", "Busca cursos, escribe un nombre y pulsa Agregar. Los cursos alimentan servicios, certificados y fichas de instructores. Los cursos vinculados a registros se conservan para proteger los datos."),
+    step("support", '[data-tour="support-locations"]', "Ubicaciones", "Busca ubicaciones y agrega departamento y distrito. Las ubicaciones vinculadas a servicios no se pueden eliminar."),
     ...["courses", "locations", ...(isAdmin ? ["salespeople"] : [])].flatMap(key => {
       const base = `[data-tour="support-${key}"]`;
       const title = key === "courses" ? "cursos" : key === "locations" ? "ubicaciones" : "comerciales";
       return [
-        step("support", `${base} .search-box`, `Buscar ${title}`, "La búsqueda filtra los registros de este catálogo mientras escribes."),
         ...(key === "locations" ? [
           step("support", `${base} [name=department]`, "Departamento", "Escribe el departamento de la ubicación que vas a agregar."),
           step("support", `${base} [name=district]`, "Distrito", "Escribe el distrito correspondiente al departamento.")
         ] : [step("support", `${base} [name=name]`, `Nombre de ${key === "courses" ? "curso" : "comercial"}`, "Escribe el nombre del nuevo registro. El catálogo lo pondrá a disposición en los apartados correspondientes.")]),
         step("support", `${base} .support-form > button`, `Agregar ${key === "courses" ? "curso" : key === "locations" ? "ubicación" : "comercial"}`, "Agregar valida y guarda los datos del formulario. El tutorial únicamente lo muestra, sin crear registros."),
-        step("support", `${base} .support-list`, `Lista y eliminación de ${title}`, "Consulta los registros y usa la papelera solo si deseas eliminarlos. La confirmación advierte sobre los registros asociados que también se eliminan.")
       ];
     }),
-    step("support", '[data-tour="support-salespeople"]', "Comerciales", "Solo administradores pueden ver y gestionar este catálogo. Crear un comercial no crea una cuenta: la cuenta se configura en Usuarios. Eliminar del catálogo puede borrar registros asociados; no equivale a eliminar una cuenta.", { admin: true }),
+    step("support", '[data-tour="support-salespeople"]', "Comerciales", "Solo administradores pueden ver y gestionar este catálogo. Crear un comercial no crea una cuenta: la cuenta se configura en Usuarios. Los comerciales vinculados a ventas o cuentas no se pueden eliminar del catálogo.", { admin: true }),
     step("users", ".users-page h1", "Usuarios", "Esta página está disponible solo para administradores. Aquí se crean accesos, se asignan comerciales y se gestionan las cuentas.", { admin: true }),
     step("users", '.users-form [name="email"]', "Correo de acceso", "Escribe un correo válido: será el identificador usado para iniciar sesión.", { admin: true }),
     step("users", '.users-form [name="password"]', "Contraseña inicial", "La contraseña debe tener al menos 12 caracteres y como máximo 72 bytes. Comunícala al titular por un canal privado.", { admin: true }),
@@ -114,11 +101,14 @@ export function tutorialSteps(isAdmin: boolean): TutorialStep[] {
     step("users", ".user-account-list, .users-page > .panel:nth-of-type(2)", "Cuentas existentes", "Cada cuenta muestra su rol y permite guardar un correo nuevo o cambiar el comercial asignado. Cambiar la asignación no mueve las ventas históricas.", { admin: true }),
     step("users", ".user-email-form [name=email], .user-account-list", "Cambiar correo", "Escribe el nuevo correo y pulsa Guardar correo. La contraseña actual se conserva y el siguiente ingreso usa el correo nuevo.", { admin: true }),
     step("users", ".user-email-form [name=salespersonId], .user-account-list", "Cambiar el comercial asignado", "Selecciona el comercial y pulsa Guardar comercial. Solo las nuevas ventas usan la nueva asignación.", { admin: true }),
-    step("users", ".user-delete-button, .user-account-list", "Eliminar una cuenta", "Eliminar cuenta abre una confirmación y revoca su acceso, conservando el comercial y sus ventas. No puedes borrar tu propia cuenta ni el último administrador.", { admin: true }),
-    step("users", ".tour-delete-preview", "Confirmar la eliminación de la cuenta", "La confirmación revoca el acceso de la cuenta, pero conserva el comercial y sus ventas. Cancelar mantiene la cuenta. Esta demostración no elimina usuarios.", { admin: true, confirmation: true }),
     step("summary", ".sidebar-toggle, .mobile-menu", "Contraer el menú", "La flecha reduce la barra lateral a iconos. También puedes deslizarla. En móvil el botón de menú despliega la navegación."),
     step("summary", ".theme-toggle", "Tema claro y oscuro", "El botón de sol o luna cambia el tema. Tu elección se conserva en este dispositivo."),
     step("summary", ".logout-button", "Cerrar sesión", "El botón está abajo en la barra lateral y finaliza tu sesión en este dispositivo."),
-    step("summary", '[data-tour="replay"]', "Repetir el tutorial", "Puedes repetir el recorrido con Ver tutorial o el icono de ayuda en móvil. Finalizar u Omitir evita que se abra automáticamente. Tu avance se guarda en la cuenta.")
+    step("summary", '[data-tour="replay"]', "Repetir el tutorial", "Puedes repetir el recorrido con Ver tutorial o el icono de ayuda en móvil. Finalizar u Omitir evita que se abra automáticamente. Tu avance se guarda en la cuenta."),
+    step("services", ".tour-duplicate-preview", "Aviso de posible duplicado", "Si el cliente, un curso y una fecha coinciden con otro registro, verás este aviso antes de guardar. Volver y revisar conserva el formulario; Guardar de todos modos permite una venta distinta. El aviso también se aplica al editar y a los certificados. Este es solo un ejemplo.", { preview: "duplicate" }),
+    step("history", ".history-panel", "Historial de cambios", "Consulta quién creó, editó, envió a papelera o restauró un registro y cuándo. También se registran cambios en catálogos y cuentas, sin contraseñas. Comienza desde que se activa esta función; no reconstruye cambios antiguos."),
+    step("history", ".history-entry, .history-panel", "Ver qué cambió", "Despliega un cambio para comparar Antes y Después. Usa las páginas para consultar eventos anteriores. Los administradores ven todo; los vendedores ven su comercial y sus propias acciones."),
+    step("trash", ".trash-panel", "Papelera durante siete días", "Los servicios y ventas eliminados dejan de contar en los reportes y permanecen recuperables durante siete días. La tabla indica el vencimiento exacto. Después de ese límite ya no se pueden restaurar."),
+    step("trash", ".trash-panel .table-scroll", "Restaurar un registro", "Restaurar conserva el importe, fechas, cursos y estado originales. Se vuelve a comprobar la disponibilidad del instructor. Los vendedores recuperan registros de su comercial; los administradores pueden recuperar todos. Las cuentas y los catálogos no se recuperan aquí."),
   ].filter(s => !s.admin || isAdmin);
 }
