@@ -4,7 +4,7 @@ import { currentUser } from '@/lib/current-user';
 import { prisma } from '@/lib/prisma';
 import { recordError } from '@/lib/record-error';
 import { InvalidRecord, invoiceDate } from '@/lib/record-input';
-export const QUOTATION_LIMIT = 10 * 1024 * 1024;
+export { QUOTATION_MAX_BYTES as QUOTATION_LIMIT } from "@/lib/quotation-limits";
 export const quotationInclude = { courses: true, salesperson: true, documents: { where: { state: 'READY' }, orderBy: { createdAt: 'desc' as const } }, service: { select: { id: true, deletedAt: true, serviceDate: true, correlativeCode: true } } };
 export class QuotationError extends Error { constructor(message: string, public status = 400) { super(message); } }
 export async function quotationActor() {

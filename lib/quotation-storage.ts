@@ -15,6 +15,13 @@ export async function signQuotationUpload(pathname: string, size: number) {
   const url = await getSignedUrl(client(), new PutObjectCommand({ ...object(pathname), ContentType: 'application/pdf', ContentLength: size, IfNoneMatch: '*' }), { expiresIn: 180, signableHeaders: new Set(['content-type','content-length','if-none-match']) });
   return { url, headers: { 'Content-Type': 'application/pdf', 'If-None-Match': '*' } };
 }
+export async function signQuotationDownload(pathname: string, name: string, download: boolean) {
+  return getSignedUrl(client(), new GetObjectCommand({
+    ...object(pathname), ResponseContentType: 'application/pdf',
+    ResponseContentDisposition: `${download ? 'attachment' : 'inline'}; filename*=UTF-8''${encodeURIComponent(name)}`,
+    ResponseCacheControl: 'private, no-store'
+  }), { expiresIn: 60 });
+}
 export async function headQuotationFile(provider: string, pathname: string) {
   if (provider === 'BLOB') { const blob = await head(pathname); return { size: blob.size, contentType: blob.contentType }; }
   if (provider !== 'R2') throw Error('Proveedor desconocido');

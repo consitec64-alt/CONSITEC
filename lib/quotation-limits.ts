@@ -1,0 +1,2 @@
+export const QUOTATION_MAX_MB = 25;
+export const QUOTATION_MAX_BYTES = QUOTATION_MAX_MB * 1024 * 1024;
