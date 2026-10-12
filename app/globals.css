@@ -388,3 +388,10 @@ html[data-text-size]:not([data-text-size=normal]) small{font-size:calc(11px * va
   .sidebar:not(.is-open) .nav-group-title { display: none; }
   .sidebar.is-open .nav-group-title { display: block; }
 }
+
+.daily-classes-dialog { width: min(680px, calc(100vw - 32px)); }
+.daily-classes-dialog h2 { display: flex; align-items: center; gap: 9px; }
+.daily-class-list { list-style: none; padding: 0; margin: 18px 0; display: grid; gap: 12px; }
+.daily-class-list li { padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
+.daily-class-list p { margin: 6px 0; }
+.daily-class-list .split { flex-wrap: wrap; gap: 8px; }
