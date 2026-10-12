@@ -251,6 +251,7 @@ model Quotation {
   @@index([salespersonId, createdAt])
 }
 model QuotationDocument {
+  storageProvider String @default("BLOB")
   id String @id @default(cuid())
   quotationId String
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
