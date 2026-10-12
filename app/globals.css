@@ -33,9 +33,9 @@
   .user-email-form .btn{width:100%}
 }
 
-.official-brand{justify-content:center;padding:0}
+.official-brand{justify-content:center;padding:0;background:transparent}
 .consitec-logo{display:block;width:176px;height:auto;max-width:100%;object-fit:contain}
-.brand-on-dark{align-self:flex-start;background:#fff;padding:12px 18px!important;border-radius:12px}
+.brand-on-dark{align-self:flex-start;background:transparent;padding:0!important;border-radius:0}
 .brand-on-dark .consitec-logo{width:140px}
 .brand-compact .consitec-logo{width:100px}
 .user-delete-button{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;padding:6px 0;color:#bc3d47;font-size:11px}
@@ -165,7 +165,7 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 
 .monthly-close-panel{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:18px;margin:20px 0}.monthly-close-panel p{margin-top:7px;color:var(--muted);font-size:12px;line-height:1.6}.monthly-close-panel>div{flex:1;min-width:180px}.monthly-close-dialog{width:min(580px,calc(100vw - 32px));max-height:85dvh;overflow:auto;border:1px solid var(--border);border-radius:16px;background:var(--surface);color:var(--ink);padding:24px}.monthly-close-dialog::backdrop{background:#10244688}.monthly-close-dialog p{margin-top:18px;line-height:1.6}.monthly-close-dialog .dialog-actions{flex-wrap:wrap}
 
-.login-welcome{position:fixed;inset:0;z-index:100;background:#123d64;color:#fff;display:grid;place-items:center;overflow:hidden;outline:none}.welcome-curtain{position:absolute;top:0;bottom:0;width:50%;background:#185881;animation:welcome-open 800ms cubic-bezier(.65,0,.35,1) 1900ms forwards}.welcome-left{left:0;--opening:-100%}.welcome-right{right:0;--opening:100%}.welcome-content{position:relative;text-align:center;padding:28px;max-width:min(620px,100%);animation:welcome-reveal 550ms ease-out both}.welcome-logo{width:240px;max-width:75vw;margin:0 auto 28px;background:#fff;border-radius:24px;padding:22px;box-shadow:0 18px 55px #062d4938}.welcome-logo img{display:block;width:100%;height:auto}.welcome-content h1{font-size:clamp(25px,5vw,36px);letter-spacing:-.6px;line-height:1.25}.welcome-content h1 span{display:block;margin-top:10px;overflow-wrap:anywhere;color:#ffd28a}.welcome-content p{margin-top:18px;color:#d8e9f6;line-height:1.6}.welcome-enter{margin-top:26px;border:1px solid #ffffff66;background:transparent;color:#fff;border-radius:10px;padding:11px 20px}.welcome-enter:hover{background:#ffffff18}@keyframes welcome-open{to{transform:translateX(var(--opening))}}@keyframes welcome-reveal{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.welcome-curtain,.welcome-content{animation:none}.welcome-curtain{display:none}}
+.login-welcome{position:fixed;inset:0;z-index:100;background:#123d64;color:#fff;display:grid;place-items:center;overflow:hidden;outline:none}.welcome-curtain{position:absolute;top:0;bottom:0;width:50%;background:#185881;animation:welcome-open 800ms cubic-bezier(.65,0,.35,1) 1900ms forwards}.welcome-left{left:0;--opening:-100%}.welcome-right{right:0;--opening:100%}.welcome-content{position:relative;text-align:center;padding:28px;max-width:min(620px,100%);animation:welcome-reveal 550ms ease-out both}.welcome-logo{width:240px;max-width:75vw;margin:0 auto 28px;background:transparent;border-radius:0;padding:0;box-shadow:none}.welcome-logo img{display:block;width:100%;height:auto}.welcome-content h1{font-size:clamp(25px,5vw,36px);letter-spacing:-.6px;line-height:1.25}.welcome-content h1 span{display:block;margin-top:10px;overflow-wrap:anywhere;color:#ffd28a}.welcome-content p{margin-top:18px;color:#d8e9f6;line-height:1.6}.welcome-enter{margin-top:26px;border:1px solid #ffffff66;background:transparent;color:#fff;border-radius:10px;padding:11px 20px}.welcome-enter:hover{background:#ffffff18}@keyframes welcome-open{to{transform:translateX(var(--opening))}}@keyframes welcome-reveal{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.welcome-curtain,.welcome-content{animation:none}.welcome-curtain{display:none}}
 
 .quotation-form { border: 0; padding: 0; margin: 20px 0; min-width: 0; }
 .quotation-form textarea { width: 100%; min-height: 80px; resize: vertical; padding: 10px; border: 1px solid var(--border); border-radius: 8px; color: inherit; background: var(--surface); font: inherit; }
@@ -207,7 +207,7 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 /* Commercial workspace refresh: clearer hierarchy and quiet brand accents. */
 :root { --brand-blue: #185881; --brand-orange: #d78a1c; --card-shadow: 0 5px 22px rgba(28,52,89,.035); }
 .workspace-shell .sidebar { background: #12324e; color: #eaf2fb; border-right: 0; }
-.workspace-shell .sidebar-brand { padding: 12px; margin: 0 0 20px; background: #fff; border-radius: 16px; }
+.workspace-shell .sidebar-brand { padding: 12px; margin: 0 0 20px; background: transparent; border-radius: 0; }
 .workspace-shell .nav-caption { color: #9db6cc; font-size: 10px; letter-spacing: .11em; }
 .workspace-shell .nav-item { color: #c3d4e4; border-radius: 11px; transition: background .15s ease, color .15s ease; }
 .workspace-shell .nav-item:hover { background: #204762; color: #fff; }
@@ -219,7 +219,7 @@ textarea:focus-visible,summary:focus-visible{outline:3px solid #93b9ff;outline-o
 .workspace-shell .sidebar-footer > div { min-width: 0; overflow-wrap: anywhere; }
 .workspace-shell .sidebar-toggle { color: #c3d4e4; background: #204762; }
 .workspace-shell .sidebar-footer .avatar { background: #235675; color: #fff; }
-.workspace-shell.sidebar-collapsed .sidebar-brand { padding: 6px; border-radius: 10px; }
+.workspace-shell.sidebar-collapsed .sidebar-brand { padding: 6px; border-radius: 0; }
 .topbar { border-bottom: 1px solid var(--border); }
 .access-badge { display: inline-flex; align-items: center; padding: 7px 11px; border: 1px solid var(--border); border-radius: 20px; color: var(--muted); font-size: 11px; }
 .page-heading h1 { letter-spacing: -.9px; }
