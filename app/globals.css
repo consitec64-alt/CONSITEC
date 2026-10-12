@@ -376,3 +376,15 @@ html[data-text-size]:not([data-text-size=normal]) small{font-size:calc(11px * va
 .dial-digital{text-align:center}.clock-popup:has(.clock-sphere){width:286px;max-width:calc(100vw - 60px)}
 @media(max-width:360px){.clock-sphere,.interactive-clock-face{width:220px;height:220px}.clock-sphere{margin-left:auto;margin-right:auto}}
 .has-stack:not(.many-stack):before{display:none}
+
+/* Grouped navigation keeps section boundaries visible in compact mode. */
+.workspace-shell .nav-group + .nav-group { margin-top: 14px; padding-top: 10px; border-top: 1px solid #ffffff20; }
+.workspace-shell .nav-group-title { padding: 4px 13px 7px; color: #9db6cc; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.sidebar-collapsed .nav-group-title { display: none; }
+.users-reset-dialog { max-width: 520px; }
+.users-reset-dialog label { display: flex; flex-direction: column; gap: 8px; }
+.user-reset-button { margin-top: 8px; }
+@media (max-width: 760px) {
+  .sidebar:not(.is-open) .nav-group-title { display: none; }
+  .sidebar.is-open .nav-group-title { display: block; }
+}
