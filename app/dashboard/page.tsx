@@ -1,4 +1,5 @@
 "use client";
+import { readPreferences, type Preferences } from "@/lib/preferences";
 import RecordProfile from "@/components/record-profile";
 
 import { useTutorial } from "@/components/dashboard-tutorial";
@@ -85,10 +86,16 @@ export default function Dashboard() {
   const [rep, setRep] = useState("");
   const [status, setStatus] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const preferencesLoaded = useRef(false);
   const [collapsed, setCollapsed] = useState(false);
   const dragStart = useRef(0);
-  useEffect(() => { try { setCollapsed(localStorage.getItem("consitec-sidebar") === "compact"); } catch {} }, []);
-  const collapseSidebar = (value: boolean) => { setCollapsed(value); try { localStorage.setItem("consitec-sidebar", value ? "compact" : "expanded"); } catch {} };
+  useEffect(() => {
+    const update = (event: Event) => { const p = (event as CustomEvent<Preferences>).detail; setCollapsed(p.compactSidebar); setFavorites(p.favorites); };
+    window.addEventListener('preferences-updated', update);
+    return () => window.removeEventListener('preferences-updated', update);
+  }, []);
+  const collapseSidebar = (value: boolean) => { setCollapsed(value); void request('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferences: { compactSidebar: value } }) }).catch(() => announce('No se pudo guardar la barra lateral.', true)); };
   const swipeSidebar = (delta: number) => { if (Math.abs(delta) < 30) return; if (window.innerWidth <= 760) setMobileNav(delta > 0); else collapseSidebar(delta < 0); };
   const [modal, setModal] = useState<"service" | "sale" | null>(null);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
@@ -132,8 +139,13 @@ export default function Dashboard() {
     setLoading(true); setError("");
     try {
       const q = `month=${period.month}&year=${period.year}`;
-      const user = await request<{role:string;displayName:string|null;avatar:string|null;salesperson:Meta|null}>("/api/auth/me");
+      const user = await request<{preferences:Preferences;tutorialCompleted:boolean;role:string;displayName:string|null;avatar:string|null;salesperson:Meta|null}>("/api/auth/me");
       if(version!==loadVersion.current)return;
+      if (!preferencesLoaded.current) {
+        const p = readPreferences(user.preferences); setCollapsed(p.compactSidebar); setFavorites(p.favorites);
+        if (user.tutorialCompleted !== false) setTab((user.role === 'SUPERVISOR' && !['summary','services','instructors'].includes(p.homeView) ? 'summary' : p.homeView) as Tab);
+        preferencesLoaded.current = true;
+      }
       setReadOnly(user.role==="SUPERVISOR");setRoleReady(true);setAccountName(user.displayName);
       const [s, c, d, instructors, courses, locations] = await Promise.all([
         request<Service[]>(`/api/services?${q}`), user.role==="SUPERVISOR"?Promise.resolve([] as Sale[]):request<Sale[]>(`/api/certificate-sales?${q}`), request<DashboardData>(`/api/dashboard?${q}`),
@@ -204,7 +216,7 @@ export default function Dashboard() {
   const bannerActions = readOnly ? <><button className="btn" onClick={()=>goTo("services")}><TrendingUp size={16}/>Ver agenda</button><button className="btn secondary" onClick={()=>goTo("instructors")}><History size={16}/>Ver registro de instructores</button></> : tab==='summary'?<><button className="btn" disabled={loading} onClick={()=>openRecord('service')}><Plus size={16}/>Registrar servicio</button><button className="btn secondary" disabled={loading} onClick={()=>{goTo('certificates');openRecord('sale');}}><Award size={16}/>Vender certificados</button></>:tab==='services'?<><button className="btn" disabled={loading} onClick={()=>openRecord('service')}><Plus size={16}/>Registrar servicio</button><button className="btn secondary" onClick={()=>goTo('instructors')}><GraduationCap size={16}/>Ver instructores</button></>:tab==='quotations'?<><button className="btn" disabled={loading} onClick={()=>document.querySelector<HTMLButtonElement>('[data-tour="new-quotation"]')?.click()}><Plus size={16}/>Nueva cotización</button><button className="btn secondary" onClick={()=>goTo('services')}><CalendarDays size={16}/>Ver agenda</button></>:tab==='certificates'?<><button className="btn" disabled={loading} onClick={()=>openRecord('sale')}><Plus size={16}/>Nueva venta</button><button className="btn secondary" onClick={()=>goTo('performance')}><TrendingUp size={16}/>Ver rendimiento</button></>:tab==='performance'?<><button className="btn" onClick={()=>focusSection('.monthly-summary')}><Users size={16}/>Resumen por comercial</button><button className="btn secondary" onClick={()=>{const editor=document.querySelector<HTMLDetailsElement>('.week-editor');if(isAdmin&&editor)editor.open=true;focusSection('.commercial-weeks');}}><CalendarDays size={16}/>{isAdmin?'Configurar semanas':'Consultar semanas'}</button></>:tab==='instructors'?<><button className="btn" onClick={()=>focusSection('.register-filters select')}><Search size={16}/>Ir a los filtros</button><button className="btn secondary" onClick={()=>goTo('services')}><CalendarDays size={16}/>Ver agenda</button></>:tab==='support'?<><button className="btn" onClick={()=>focusSection('.instructor-card')}><GraduationCap size={16}/>Fichas de instructores</button><button className="btn secondary" onClick={()=>focusSection('[data-tour="support-courses"]')}><Database size={16}/>Catálogo de cursos</button></>:tab==='history'?<><button className="btn" onClick={()=>focusSection('.history-panel input')}><Search size={16}/>Buscar un cambio</button><button className="btn secondary" onClick={()=>goTo('trash')}><Trash2 size={16}/>Abrir papelera</button></>:<><button className="btn" onClick={()=>focusSection('.trash-panel')}><History size={16}/>Revisar registros</button><button className="btn secondary" onClick={()=>goTo('history')}><History size={16}/>Ver historial</button></>;
 
   return <div data-tutorial={!!tutorial} className={`workspace-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
-    <aside className={`sidebar ${mobileNav ? "is-open" : ""}`} onTouchStart={e => { dragStart.current = e.changedTouches[0].clientX; }} onTouchEnd={e => swipeSidebar(e.changedTouches[0].clientX - dragStart.current)}><div className="sidebar-content"><div className="sidebar-brand"><Brand href="/dashboard" /></div><button type="button" className="sidebar-toggle icon-button" aria-label={collapsed ? "Expandir barra lateral" : "Contraer barra lateral"} aria-expanded={!collapsed} onClick={() => collapseSidebar(!collapsed)}>{collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}</button><div className="nav-caption">ESPACIO DE TRABAJO</div><nav aria-label="Navegación principal">{navigationGroups.map(group => {
+    <aside className={`sidebar ${mobileNav ? "is-open" : ""}`} onTouchStart={e => { dragStart.current = e.changedTouches[0].clientX; }} onTouchEnd={e => swipeSidebar(e.changedTouches[0].clientX - dragStart.current)}><div className="sidebar-content"><div className="sidebar-brand"><Brand href="/dashboard" /></div><button type="button" className="sidebar-toggle icon-button" aria-label={collapsed ? "Expandir barra lateral" : "Contraer barra lateral"} aria-expanded={!collapsed} onClick={() => collapseSidebar(!collapsed)}>{collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}</button><div className="nav-caption">ESPACIO DE TRABAJO</div><nav aria-label="Navegación principal">{visibleTabs.some(item=>favorites.includes(item.id))&&<div className="nav-group" role="group" aria-label="Favoritos"><div className="nav-group-title">Favoritos</div>{visibleTabs.filter(item=>favorites.includes(item.id)).map(item=><button key={item.id} className={`nav-item ${tab===item.id?'active':''}`} title={item.label} aria-label={`Favorito: ${item.label}`} onClick={()=>{goTo(item.id);setMobileNav(false);}}><item.icon size={19}/><span className="nav-label">{item.label}</span></button>)}</div>}{navigationGroups.map(group => {
           const items = visibleTabs.filter(item => item.group === group);
           if (!items.length && !(roleReady && isAdmin && group === "Administración")) return null;
           return <div className="nav-group" key={group} role="group" aria-label={group}>

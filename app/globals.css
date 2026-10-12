@@ -395,3 +395,9 @@ html[data-text-size]:not([data-text-size=normal]) small{font-size:calc(11px * va
 .daily-class-list li { padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
 .daily-class-list p { margin: 6px 0; }
 .daily-class-list .split { flex-wrap: wrap; gap: 8px; }
+
+.preferences-favorites { border: 1px solid var(--border); border-radius: 10px; padding: 14px; display: grid; gap: 10px; }
+.preferences-favorites label { display: flex; flex-direction: row; align-items: center; gap: 10px; }
+.preferences-favorites input { width: auto; }
+.daily-classes-compact { position: fixed; bottom: 20px; right: 20px; z-index: 45; background: var(--bg); color: var(--ink); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: 0 8px 30px #0002; max-width: calc(100vw - 40px); }
+.daily-classes-compact p { margin: 8px 0; }
