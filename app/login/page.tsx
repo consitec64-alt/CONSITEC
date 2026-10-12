@@ -5,14 +5,15 @@ import ThemeToggle from "@/components/theme-toggle";
 import Brand from "@/components/brand";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, LockKeyhole, AlertCircle } from "lucide-react";
+import { ArrowRight, LockKeyhole, AlertCircle, Eye, EyeOff, UserRound } from "lucide-react";
 export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [welcome,setWelcome]=useState<{name:string|null}|null>(null);
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault(); setLoading(true); setError("");
+    e.preventDefault(); if (loading) return; setLoading(true); setError("");
     const payload = Object.fromEntries(new FormData(e.currentTarget));
     try {
       const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -26,5 +27,31 @@ export default function LoginPage() {
     } catch (err) { setError(err instanceof Error ? err.message : "No se pudo iniciar sesión. Inténtalo nuevamente."); setLoading(false); }
   }
   if(welcome)return <LoginWelcome name={welcome.name} onComplete={()=>router.replace("/dashboard")} />;
-  return <main className="login-shell"><section className="login-story"><Brand href="/" className="brand-on-dark" /><div><span className="eyebrow">TU EQUIPO. TU OPERACIÓN.</span><h1>Todo conectado.<br />Todo bajo control.</h1><p>Organiza tus servicios, consulta las ventas de certificados y sigue el avance de tu equipo en un mismo espacio.</p><div className="login-pills"><span>Servicios</span><span>Certificados</span><span>Equipo comercial</span></div></div><small>CONSITEC · Gestión comercial y operativa</small></section><section className="login-form-panel"><div className="login-form"><div className="login-theme"><ThemeToggle /></div><span className="login-lock"><LockKeyhole size={24} /></span><h2>Bienvenido a Consitec</h2><p>Ingresa para acceder a tu espacio de trabajo.</p><form onSubmit={onSubmit} className="grid"><label>Correo electrónico o usuario actual<input name="username" placeholder="nombre@empresa.com" autoComplete="username" inputMode="email" autoCapitalize="none" maxLength={254} required /></label><label>Contraseña<input name="password" type="password" placeholder="Ingresa tu contraseña" autoComplete="current-password" required /></label><button className="btn" disabled={loading}>{loading ? "Ingresando…" : "Ingresar al panel"}<ArrowRight size={17} /></button>{error && <div className="error-banner" role="alert"><AlertCircle size={17} />{error}</div>}</form><small>Panel interno de operaciones</small></div></section></main>;
+  return <main className="login-shell login-modern">
+    <section className="login-story" aria-label="CONSITEC, gestión comercial y operativa">
+      <div className="login-brand-content">
+        <Brand href="/" className="brand-on-dark" sizes="(max-width: 760px) 180px, 440px" />
+        <h1>Tu equipo, conectado.</h1>
+        <p>Gestiona servicios, certificados y tu actividad comercial.</p>
+      </div>
+      <small>CONSITEC · Gestión comercial y operativa</small>
+    </section>
+    <section className="login-form-panel" aria-labelledby="login-title">
+      <div className="login-form">
+        <div className="login-theme"><ThemeToggle /></div>
+        <h2 id="login-title">Bienvenido a CONSITEC</h2>
+        <p>Ingresa a tu espacio de trabajo.</p>
+        <form onSubmit={onSubmit} className="grid">
+          <label htmlFor="login-username">Correo o usuario</label>
+          <div className="login-input-wrap"><UserRound size={19} aria-hidden="true" /><input id="login-username" name="username" placeholder="Tu correo o usuario" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={254} required disabled={loading} /></div>
+          <label htmlFor="login-password">Contraseña</label>
+          <div className="login-input-wrap"><LockKeyhole size={19} aria-hidden="true" /><input id="login-password" name="password" type={showPassword ? "text" : "password"} placeholder="Ingresa tu contraseña" autoComplete="current-password" required disabled={loading} /><button type="button" className="login-password-toggle" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div>
+          <button className="btn login-submit" disabled={loading}>{loading ? "Ingresando…" : "Iniciar sesión"}<ArrowRight size={19} aria-hidden="true" /></button>
+          {error && <div className="error-banner" role="alert"><AlertCircle size={17} aria-hidden="true" />{error}</div>}
+        </form>
+        <p className="login-help">¿No recuerdas tu contraseña? Contacta a tu administrador.</p>
+        <small>Panel comercial y operativo</small>
+      </div>
+    </section>
+  </main>;
 }

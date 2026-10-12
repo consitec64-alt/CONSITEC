@@ -395,3 +395,44 @@ html[data-text-size]:not([data-text-size=normal]) small{font-size:calc(11px * va
 .daily-class-list li { padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
 .daily-class-list p { margin: 6px 0; }
 .daily-class-list .split { flex-wrap: wrap; gap: 8px; }
+
+/* Login refresh: use the existing transparent brand without a white plate. */
+.login-modern { grid-template-columns: 57% 43%; min-height: 100svh; }
+.login-modern .login-story { position: relative; isolation: isolate; overflow: hidden; min-height: 100svh; padding: clamp(30px, 5vw, 80px); background: radial-gradient(ellipse at 80% 10%, #144e83 0, #0b2d54 45%, #061b36 100%); justify-content: center; }
+.login-modern .login-story::before, .login-modern .login-story::after { content: ''; position: absolute; z-index: -1; width: 700px; height: 700px; border-radius: 50%; pointer-events: none; }
+.login-modern .login-story::before { top: -550px; left: -180px; border: 65px solid #2674ad35; box-shadow: 0 0 0 85px #1c619b20; }
+.login-modern .login-story::after { bottom: -560px; left: -260px; border: 45px solid #1965a455; outline: 2px solid #e18a21; outline-offset: 28px; box-shadow: 0 0 0 90px #1e61992b; }
+.login-brand-content { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.login-modern .brand-on-dark { align-self: center; background: transparent; border-radius: 0; padding: 0 !important; width: min(440px, 80%); }
+.login-modern .brand-on-dark .consitec-logo { width: 100%; }
+.login-modern .login-story h1 { font-size: clamp(30px, 3.5vw, 54px); line-height: 1.14; letter-spacing: -1.5px; margin: 38px 0 16px; }
+.login-modern .login-story p { max-width: 520px; font-size: clamp(15px, 1.35vw, 20px); color: #d8e7f5; line-height: 1.6; }
+.login-modern .login-story > small { position: absolute; bottom: 28px; left: 0; right: 0; text-align: center; color: #b9cee4; }
+.login-modern .login-form-panel { padding: clamp(28px, 4vw, 70px); background: #fcfcfd; }
+.login-modern .login-form { max-width: 440px; }
+.login-modern .login-form h2 { font-size: clamp(25px, 2.3vw, 36px); line-height: 1.2; letter-spacing: -1px; }
+.login-modern .login-form > p { font-size: 16px; line-height: 1.6; margin: 14px 0 42px; }
+.login-modern .login-form .grid { gap: 12px; }
+.login-modern .login-form label { font-size: 14px; margin-top: 14px; }
+.login-input-wrap { display: flex; position: relative; align-items: center; }
+.login-input-wrap > svg { position: absolute; left: 17px; color: var(--muted); pointer-events: none; }
+.login-modern .login-input-wrap input { padding: 17px 46px; min-height: 56px; border-radius: 10px; font-size: 16px; }
+.login-password-toggle { position: absolute; right: 8px; width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--muted); }
+.login-password-toggle:hover { background: var(--soft); }
+.login-modern .login-submit { margin-top: 18px; min-height: 56px; padding: 16px 20px; font-size: 15px; background: #103e6b; justify-content: center; gap: 16px; }
+.login-modern .login-submit svg { color: #f3a12b; }
+.login-modern .login-submit:hover { background: #175482; }
+.login-modern .login-form > .login-help { border-top: 1px solid var(--border); padding-top: 24px; margin: 28px 0 20px; font-size: 13px; text-align: center; }
+.login-modern .login-form > small { margin-top: 40px; }
+[data-theme=dark] .login-modern .login-form-panel { background: var(--surface); }
+.welcome-logo { background: transparent; border-radius: 0; box-shadow: none; padding: 0; width: 300px; }
+@media (max-width: 760px) {
+  .login-modern { grid-template-columns: 1fr; }
+  .login-modern .login-story { min-height: auto; padding: 30px 24px 32px; }
+  .login-modern .brand-on-dark { width: 180px; }
+  .login-modern .login-story h1 { font-size: 28px; margin-top: 22px; letter-spacing: -.7px; }
+  .login-modern .login-story p { font-size: 14px; max-width: 320px; }
+  .login-modern .login-form-panel { padding: 22px 24px 36px; }
+  .login-modern .login-form > p { margin-bottom: 18px; }
+  .login-modern .login-form > small { margin-top: 22px; }
+}
