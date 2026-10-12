@@ -95,7 +95,7 @@ export default function Dashboard() {
     window.addEventListener('preferences-updated', update);
     return () => window.removeEventListener('preferences-updated', update);
   }, []);
-  const collapseSidebar = (value: boolean) => { setCollapsed(value); void request('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferences: { compactSidebar: value } }) }).catch(() => announce('No se pudo guardar la barra lateral.', true)); };
+  const collapseSidebar = (value: boolean) => { setCollapsed(value); void request<{preferences:Preferences}>('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferences: { compactSidebar: value } }) }).then(saved=>window.dispatchEvent(new CustomEvent('preferences-updated',{detail:readPreferences(saved.preferences)}))).catch(() => announce('No se pudo guardar la barra lateral.', true)); };
   const swipeSidebar = (delta: number) => { if (Math.abs(delta) < 30) return; if (window.innerWidth <= 760) setMobileNav(delta > 0); else collapseSidebar(delta < 0); };
   const [modal, setModal] = useState<"service" | "sale" | null>(null);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
