@@ -4,7 +4,7 @@ import { useTutorial } from "@/components/dashboard-tutorial";
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import WorkspaceBanner from "@/components/workspace-banner";
-import { Trash2, UserPlus, Users } from "lucide-react";
+import { KeyRound, Trash2, UserPlus, Users } from "lucide-react";
 import CompanyFooter from "@/components/company-footer";
 import ThemeToggle from "@/components/theme-toggle";
 import Brand from "@/components/brand";
@@ -32,6 +32,8 @@ export default function UsersPanel() {
   const [currentId, setCurrentId] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [deleteError, setDeleteError] = useState("");
+  const resetDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => { if (resetTarget) resetDialog.current?.showModal(); }, [resetTarget]);
   const deleteDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (deleteTarget) deleteDialog.current?.showModal(); }, [deleteTarget]);
   async function load() {
@@ -104,7 +106,7 @@ export default function UsersPanel() {
       <p className="form-note">Asigna un correo a las cuentas existentes. Su contraseña se conserva; después del cambio deben ingresar con el correo nuevo. Verifica la dirección antes de guardar.</p>
       {loading ? <p role="status">Cargando usuarios…</p> : <ul className="user-account-list">{users.map(user => <li key={user.id} className="user-account">
         <div className="user-identity">{user.displayName&&<strong>{user.displayName}</strong>}<strong>{user.username}</strong><span className="user-role">{user.role === "ADMIN" ? "Administrador" : user.role === "SUPERVISOR" ? "Supervisor" : "Vendedor"}</span>
-        <button type="button" className="text-button" data-tour="reset-password" disabled={busy||user.id===currentId} onClick={()=>{setError("");setResetTarget(user);}}>Restablecer contraseña</button><button type="button" className="user-delete-button" disabled={busy || user.id === currentId} title={user.id === currentId ? "No puedes eliminar tu propia cuenta" : undefined} onClick={() => { setDeleteError(""); setDeleteTarget(user); }} aria-label={`Eliminar cuenta de ${user.username}`}><Trash2 size={14} />Eliminar cuenta</button></div>
+        <button type="button" className="btn secondary user-reset-button" data-tour="reset-password" disabled={busy||user.id===currentId} onClick={()=>{setError("");setResetTarget(user);}}><KeyRound size={14} />Restablecer contraseña</button><button type="button" className="user-delete-button" disabled={busy || user.id === currentId} title={user.id === currentId ? "No puedes eliminar tu propia cuenta" : undefined} onClick={() => { setDeleteError(""); setDeleteTarget(user); }} aria-label={`Eliminar cuenta de ${user.username}`}><Trash2 size={14} />Eliminar cuenta</button></div>
         <form className="user-email-form" onSubmit={updateEmail}>
         <input type="hidden" name="id" value={user.id} />
         <label className="users-field">Correo de {user.username}<input name="email" type="email" autoComplete="off" autoCapitalize="none" required maxLength={254} defaultValue={user.username.includes("@") ? user.username : ""} placeholder="nombre@empresa.com" /></label>
@@ -117,7 +119,7 @@ export default function UsersPanel() {
       {deleteError && <p className="error-banner" role="alert">{deleteError}</p>}
       <div className="dialog-actions"><button type="button" className="btn secondary" disabled={busy} onClick={() => { deleteDialog.current?.close(); setDeleteTarget(null); }}>Cancelar</button><button type="button" className="btn destructive" disabled={busy} onClick={() => void deleteUser()}>{busy ? "Eliminando…" : "Eliminar usuario"}</button></div>
     </dialog>}
-    {resetTarget&&<div className="modal-overlay"><div className="dialog" role="dialog" aria-modal="true" aria-label="Restablecer contraseña"><h2>Restablecer contraseña de {resetTarget.username}</h2><p>Define una contraseña temporal y entrégala por un canal privado. El usuario deberá cambiarla al entrar.</p><form onSubmit={resetPassword}><label>Contraseña temporal<input name="password" type="password" autoComplete="new-password" minLength={12} maxLength={72} required/></label>{error&&<p className="error-banner" role="alert">{error}</p>}<div className="dialog-actions"><button className="btn secondary" type="button" disabled={busy} onClick={()=>setResetTarget(null)}>Cancelar</button><button className="btn" disabled={busy}>Restablecer contraseña</button></div></form></div></div>}
+    {resetTarget&&<dialog ref={resetDialog} className="dialog users-reset-dialog" aria-labelledby="reset-password-title" onCancel={e=>{if(busy)e.preventDefault();else setResetTarget(null);}}><h2 id="reset-password-title">Restablecer contraseña de {resetTarget.username}</h2><p>Define una contraseña temporal y entrégala por un canal privado. El usuario deberá cambiarla al entrar y sus sesiones anteriores se cerrarán.</p><form onSubmit={resetPassword}><label>Contraseña temporal<input name="password" type="password" autoComplete="new-password" minLength={12} maxLength={72} required autoFocus/></label><p className="form-note">Al menos 12 caracteres y como máximo 72 bytes. Nunca se muestra la contraseña anterior.</p>{error&&<p className="error-banner" role="alert">{error}</p>}<div className="dialog-actions"><button className="btn secondary" type="button" disabled={busy} onClick={()=>setResetTarget(null)}>Cancelar</button><button className="btn" disabled={busy}>{busy ? "Restableciendo…" : "Restablecer contraseña"}</button></div></form></dialog>}
     <CompanyFooter />
   </main>;
 }
