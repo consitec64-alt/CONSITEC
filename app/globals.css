@@ -436,3 +436,11 @@ html[data-text-size]:not([data-text-size=normal]) small{font-size:calc(11px * va
   .login-modern .login-form > p { margin-bottom: 18px; }
   .login-modern .login-form > small { margin-top: 22px; }
 }
+
+/* Keep the original transparent logo readable during the welcome animation. */
+.login-welcome { background: #edf3f8; color: #17364e; }
+.welcome-curtain { background: #e3edf5; }
+.welcome-content h1 span { color: #945715; }
+.welcome-content p { color: #50677a; }
+.welcome-enter { background: #185881; border-color: #185881; color: #fff; }
+.welcome-enter:hover { background: #123e5c; }

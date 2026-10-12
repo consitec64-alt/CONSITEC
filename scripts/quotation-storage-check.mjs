@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { mock } from 'node:test';
 import { S3Client, HeadObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { uploadProvider, signQuotationUpload, headQuotationFile, getQuotationFile, deleteQuotationFile } from '../lib/quotation-storage.ts';
+import { uploadProvider, signQuotationDownload, signQuotationUpload, headQuotationFile, getQuotationFile, deleteQuotationFile } from '../lib/quotation-storage.ts';
 const names=['R2_ENDPOINT','R2_BUCKET','R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY','BLOB_READ_WRITE_TOKEN'];
 const before=Object.fromEntries(names.map(n=>[n,process.env[n]]));
 try {
@@ -14,6 +14,15 @@ try {
  assert.equal(url.searchParams.get('X-Amz-Expires'),'180');
  for(const header of ['content-length','content-type','if-none-match'])assert(url.searchParams.get('X-Amz-SignedHeaders').split(';').includes(header));
  assert.equal(signed.headers['If-None-Match'],'*');
+ for(const download of [false,true]){
+  const read=new URL(await signQuotationDownload('quotations/test/file.pdf','Cotización.pdf',download));
+  assert.equal(read.searchParams.get('X-Amz-Expires'),'60');
+  assert.equal(read.searchParams.get('response-content-type'),'application/pdf');
+  assert.match(read.searchParams.get('response-content-disposition'),download?/^attachment;/:/^inline;/);
+  assert(read.searchParams.get('response-content-disposition').includes('Cotizaci%C3%B3n.pdf'));
+  assert.equal(read.searchParams.get('response-cache-control'),'private, no-store');
+ }
+
  const requests=[];
  const send=mock.method(S3Client.prototype,'send',async command=>{
   requests.push(command);assert.equal(command.input.Bucket,'test-private');assert.equal(command.input.Key,'quotations/test/file.pdf');
