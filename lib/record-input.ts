@@ -32,17 +32,19 @@ function selectedIds(value: unknown, label: string, allowEmpty = false): string[
 }
 export function saleInput(body: Record<string, unknown>) {
   if (!body || typeof body !== "object") throw new InvalidRecord("Solicitud inválida");
-  if (!Object.values(CustomerType).includes(body.customerType as CustomerType)) throw new InvalidRecord("Tipo de cliente inválido");
+  const customerType = body.customerType || "NATURAL_PERSON";
+  if (!Object.values(CustomerType).includes(customerType as CustomerType)) throw new InvalidRecord("Tipo de cliente inválido");
   const certificateKind = body.certificateKind ?? 'OPERATOR';
   if (!Object.values(CertificateKind).includes(certificateKind as CertificateKind)) throw new InvalidRecord('Selecciona Operador o Inspección');
-  if (certificateKind === 'INSPECTION' && body.customerType !== 'COMPANY') throw new InvalidRecord('Los certificados de inspección corresponden siempre a una empresa');
-  const correlativeCode = body.customerType === 'COMPANY' ? body.correlativeCode : null;
-  if (body.customerType === 'COMPANY' && (typeof correlativeCode !== 'string' || !/^[0-9]{4}$/.test(correlativeCode))) throw new InvalidRecord('El correlativo de empresa debe tener exactamente 4 dígitos numéricos');
-  const allowed = body.customerType === "COMPANY" ? ["SCHEDULED","INVOICED"] : ["SCHEDULED","PAID"];
-  if (!allowed.includes(String(body.status))) throw new InvalidRecord("Estado no válido para este tipo de cliente");
+  if (certificateKind === 'INSPECTION' && customerType !== 'COMPANY') throw new InvalidRecord('Los certificados de inspección corresponden siempre a una empresa');
+  const correlativeCode = customerType === 'COMPANY' && body.correlativeCode != null && body.correlativeCode !== '' ? body.correlativeCode : null;
+  if (correlativeCode !== null && (typeof correlativeCode !== 'string' || !/^[0-9]{4}$/.test(correlativeCode))) throw new InvalidRecord('El correlativo de empresa debe tener exactamente 4 dígitos numéricos');
+  const allowed = customerType === "COMPANY" ? ["SCHEDULED","INVOICED"] : ["SCHEDULED","PAID"];
+  const status = body.status || "SCHEDULED";
+  if (!allowed.includes(String(status))) throw new InvalidRecord("Estado no válido para este tipo de cliente");
   const courseIds = selectedIds(body.courseIds === undefined ? [body.courseId] : body.courseIds, 'Cursos');
-  return { ...common({...body, courseId:courseIds[0]}), courseIds, certificateKind: certificateKind as CertificateKind, correlativeCode: correlativeCode as string | null,
-    requestedInvoiceDate: invoiceDate(body.invoiceDate), customerName: text(body.customerName, "Cliente"), customerType: body.customerType as CustomerType, saleDate: date(body.saleDate) };
+  return { ...common({...body, status, courseId:courseIds[0]}, true), courseIds, certificateKind: certificateKind as CertificateKind, correlativeCode: correlativeCode as string | null,
+    requestedInvoiceDate: invoiceDate(body.invoiceDate), customerName: text(body.customerName, "Cliente"), customerType: customerType as CustomerType, saleDate: date(body.saleDate) };
 }
 export function serviceDates(values: unknown): Date[] {
   if (!Array.isArray(values) || !values.length || values.length > 366) throw new InvalidRecord("Agrega entre 1 y 366 fechas al servicio");
@@ -69,7 +71,8 @@ export function serviceInput(body: Record<string, unknown>) {
   const values = rawSessions ? (rawSessions as Record<string, unknown>[]).map(session => session?.date) : body.serviceDates ?? [body.serviceDate];
   if (!Array.isArray(values)) throw new InvalidRecord("Fechas inválidas");
   const selected = values.filter(value => value != null && value !== "");
-  const dates = selected.length ? serviceDates(selected) : [];
+  if (selected.length !== values.length) throw new InvalidRecord("Completa la fecha de cada jornada");
+  const dates = serviceDates(selected);
   if (Array.isArray(rawSessions) && rawSessions.some(session => !session?.date && (session?.startTime || session?.endTime))) throw new InvalidRecord("Indica la fecha del horario");
   const sessions = dates.map(day => {
     const matching = Array.isArray(rawSessions) ? rawSessions.filter(session => typeof session?.date === "string" && session.date.slice(0, 10) === day.toISOString().slice(0, 10)) : [];

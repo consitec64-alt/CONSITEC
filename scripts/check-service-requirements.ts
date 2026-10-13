@@ -7,17 +7,17 @@ import { prisma } from "../lib/prisma";
 import { limaToday } from "../lib/monthly-close";
 
 async function main() {
-  const minimal = {company:"Empresa", courseIds:["course"], instructorIds:["instructor"]};
+  const minimal = {company:"Empresa", courseIds:["course"], instructorIds:["instructor"], serviceDate:"2026-10-13"};
   const record = serviceInput(minimal);
-  assert.equal(record.serviceDate, null);
+  assert.equal(record.serviceDate?.toISOString().slice(0,10), "2026-10-13");
   assert.equal(record.amount.toString(), "0");
   assert.equal(record.status, "SCHEDULED");
-  assert.deepEqual(record.sessions, []);
-  for (const missing of ["company","courseIds","instructorIds"]) {
+  assert.equal(record.sessions.length, 1);
+  for (const missing of ["company","courseIds","instructorIds","serviceDate"]) {
     const body: Record<string,unknown> = {...minimal}; delete body[missing];
     assert.throws(()=>serviceInput(body), InvalidRecord);
   }
-  assert.deepEqual(serviceInput({...minimal, sessions:[{date:"",startTime:"",endTime:""}]}).dates, []);
+  assert.throws(()=>serviceInput({...minimal, sessions:[{date:"",startTime:"",endTime:""}]}), InvalidRecord);
   assert.throws(()=>serviceInput({...minimal, serviceDates:"invalid"}), InvalidRecord);
   assert.throws(()=>serviceInput({...minimal, sessions:[{date:"",startTime:"08:00"}]}), InvalidRecord);
   assert.throws(()=>serviceInput({...minimal, amount:-1}), InvalidRecord);
@@ -26,7 +26,24 @@ async function main() {
   assert.equal(dated.serviceDate?.toISOString().slice(0,10),"2026-10-13");
   assert.equal(dated.sessions.length,2);
   assert.deepEqual(serviceDays({serviceDate:null, dates:[]} as any),[]);
-  assert.throws(()=>saleInput({customerType:"NATURAL_PERSON", customerName:"Cliente", courseIds:["course"], saleDate:"2026-10-13", amount:0, status:"SCHEDULED"}), InvalidRecord);
+  const certificate = {customerName:"Cliente", courseIds:["course"], saleDate:"2026-10-13"};
+  for (const customerType of ["NATURAL_PERSON","COMPANY"]) {
+    const minimalSale = {...certificate, customerType};
+    const sale = saleInput(minimalSale);
+    assert.equal(sale.amount.toString(),"0");
+    assert.equal(sale.status,"SCHEDULED");
+    assert.equal(sale.correlativeCode,null);
+    assert.equal(saleInput({...minimalSale,amount:""}).amount.toString(),"0");
+    for (const missing of ["customerName","courseIds","saleDate"]) {
+      const body: Record<string,unknown> = {...minimalSale}; delete body[missing];
+      assert.throws(()=>saleInput(body),InvalidRecord);
+    }
+    assert.throws(()=>saleInput({...minimalSale,amount:-1}),InvalidRecord);
+    assert.throws(()=>saleInput({...minimalSale,saleDate:"2026-02-30"}),InvalidRecord);
+  }
+  assert.equal(saleInput({...certificate,customerType:"COMPANY",correlativeCode:"0042"}).correlativeCode,"0042");
+  assert.throws(()=>saleInput({...certificate,customerType:"COMPANY",correlativeCode:"123"}),InvalidRecord);
+  assert.throws(()=>saleInput({...certificate,certificateKind:"INSPECTION",customerType:"NATURAL_PERSON"}),InvalidRecord);
   const tx = {salesperson:{findUnique:async({where}:any)=>where.id==="rep"?{id:"rep"}:null},user:{findUnique:async()=>({salespersonId:"own"})}} as any;
   const admin = {id:"admin",role:"ADMIN"}, sales = {id:"sales",role:"SALES"};
   assert.equal(await recordSalesperson(tx,admin,""),null);
