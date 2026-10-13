@@ -27,6 +27,7 @@ enum CustomerType {
 }
 
 model User {
+  serviceDraft Json?
   dailyClassesSeenOn String?
   tutorialStep Int @default(0)
   tutorialCompleted Boolean @default(false)
