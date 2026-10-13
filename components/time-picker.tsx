@@ -5,7 +5,7 @@ import { useTutorial } from '@/components/dashboard-tutorial';
 
 const pad = (n:number) => String(n).padStart(2,'0');
 const times = Array.from({length:24},(_,h)=>Array.from({length:12},(_,m)=>`${pad(h)}:${pad(m*5)}`)).flat();
-export default function TimePicker({name,value,onChange,label}:{name:string;value:string;onChange:(v:string)=>void;label:string}){
+export default function TimePicker({name,value,onChange,label,required=false}:{required?:boolean;name:string;value:string;onChange:(v:string)=>void;label:string}){
   const [open,setOpen]=useState(false),[invalid,setInvalid]=useState(false),[stage,setStage]=useState<'hours'|'minutes'>('hours');
   const [hour,setHour]=useState(0),[minute,setMinute]=useState(0),[minuteChosen,setMinuteChosen]=useState(false);
   const popupId=useId(),root=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null),popup=useRef<HTMLDivElement>(null);
@@ -25,7 +25,7 @@ export default function TimePicker({name,value,onChange,label}:{name:string;valu
   const numbers=stage==='hours'?[...Array.from({length:23},(_,i)=>i+1),0]:Array.from({length:12},(_,i)=>i*5);
   return <div className="time-picker-control" data-time-kind={name} ref={root} onBlurCapture={e=>{if(e.relatedTarget&&!e.currentTarget.contains(e.relatedTarget as Node))setOpen(false);}}>
     <button ref={trigger} type="button" className="clock-trigger" aria-label={`Elegir hora de ${label}${value?`, ${value}`:''}`} aria-expanded={open} aria-controls={open?popupId:undefined} onClick={()=>open?close():begin()}><Clock3 size={18} aria-hidden="true"/><span>{value||'Elige hora'}</span><ChevronDown size={15} aria-hidden="true"/></button>
-    <select className="time-picker-native" name={name} aria-label={label} aria-hidden="true" tabIndex={-1} value={value} required onChange={e=>onChange(e.target.value)} onInvalid={e=>{e.preventDefault();setInvalid(true);begin();trigger.current?.focus();}}><option value="" disabled>Elige hora</option>{legacy&&<option value={value} disabled>{value} (guardada)</option>}{times.map(t=><option key={t} value={t}>{t}</option>)}</select>
+    <select className="time-picker-native" name={name} aria-label={label} aria-hidden="true" tabIndex={-1} value={value} required={required} onChange={e=>onChange(e.target.value)} onInvalid={e=>{e.preventDefault();setInvalid(true);begin();trigger.current?.focus();}}><option value="" disabled={required}>Sin hora</option>{legacy&&<option value={value} disabled>{value} (guardada)</option>}{times.map(t=><option key={t} value={t}>{t}</option>)}</select>
     {open&&<div id={popupId} ref={popup} className="clock-popup" role="group" aria-label={`Reloj de ${label}`}><div className="clock-digital dial-digital"><strong aria-live="polite">{display}</strong><small>24 horas · minutos cada 5</small></div><p>{stage==='hours'?'1. Pulsa la hora en el reloj':'2. Pulsa los minutos en el reloj'}</p>
       <div className="clock-sphere" role="group" aria-label={stage==='hours'?'Seleccionar horas':'Seleccionar minutos'}>
         <svg className="interactive-clock-face" viewBox="0 0 240 240" aria-hidden="true"><circle className="clock-rim" cx="120" cy="120" r="119"/><circle className="clock-dial" cx="120" cy="120" r="113"/><line className="clock-minute-hand" x1="120" y1="120" x2="120" y2="53" transform={`rotate(${minute*6} 120 120)`}/><line className="clock-hour-hand" x1="120" y1="120" x2="120" y2="77" transform={`rotate(${(hour%12)*30+minute/2} 120 120)`}/><circle className="clock-pin" cx="120" cy="120" r="5"/></svg>
@@ -33,6 +33,7 @@ export default function TimePicker({name,value,onChange,label}:{name:string;valu
       </div>
       {stage==='minutes'&&<button type="button" className="text-button" onClick={()=>setStage('hours')}>Volver a elegir hora</button>}
       {legacy&&<small>Horario anterior conservado hasta completar una nueva selección.</small>}{invalid&&<small role="alert">Elige hora y minutos para continuar.</small>}
+      <button type="button" className="text-button" disabled={!!tutorial} onClick={()=>{setInvalid(false);onChange('');close();}}>Quitar hora</button>
       <button type="button" className="btn secondary clock-done" disabled={!minuteChosen} onClick={close}>Listo</button>
     </div>}
   </div>;

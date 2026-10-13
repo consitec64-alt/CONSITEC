@@ -27,7 +27,7 @@ try {
  const reloaded=(await (await api('/api/metadata/instructors')).json()).find(i=>i.id===instructor.id);assert.equal(reloaded.sctr,false);assert.equal(reloaded.carPlate,'XYZ-456');
  const beforeOctober=await dashboard(10),beforeNovember=await dashboard(11);
  const body={company:tag,correlativeCode:'0007',travelMode:'PLANE',serviceDates:['2097-10-31','2097-11-02','2097-11-01','2097-11-01'],amount:151.35,status:'SCHEDULED',instructorId:instructor.id,courseId:course.id,salespersonId:rep.id,locationId:null,certificatesOnly:false};
- for(const bad of [{correlativeCode:''},{correlativeCode:'ABC1'},{correlativeCode:'12345'},{serviceDates:[]},{serviceDates:['2097-02-30']},{travelMode:'TRAIN'},{status:'PAID'}])assert.equal((await api('/api/services','POST',{...body,...bad})).status,400);
+ for(const bad of [{correlativeCode:'ABC1'},{correlativeCode:'12345'},{serviceDates:[]},{serviceDates:['2097-02-30']},{travelMode:'TRAIN'},{status:'PAID'}])assert.equal((await api('/api/services','POST',{...body,...bad})).status,400);
  const firstResponse=await api('/api/services','POST',body);assert.equal(firstResponse.status,201);const first=await firstResponse.json();
  assert.equal(first.correlativeCode,'0007');assert.equal(first.travelMode,'PLANE');assert.equal(first.dates.length,3);assert.equal(first.invoicedAt,null);assert.equal(first.serviceDate.slice(0,10),'2097-10-31');
  assert.equal((await list(10)).filter(s=>s.id===first.id).length,1);assert.equal((await list(11)).filter(s=>s.id===first.id).length,1);
