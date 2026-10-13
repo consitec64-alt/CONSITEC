@@ -56,7 +56,8 @@ export function serviceInput(body: Record<string, unknown>) {
   if (!body || typeof body !== "object") throw new InvalidRecord("Solicitud inválida");
   if (body.status === "PAID") throw new InvalidRecord("Pagado solo se usa para certificados de personas naturales");
   if (typeof body.certificatesOnly !== "boolean") throw new InvalidRecord("Selecciona el tipo de servicio");
-  if (typeof body.correlativeCode !== "string" || !/^[0-9]{4}$/.test(body.correlativeCode)) throw new InvalidRecord("El código de correlativo debe tener exactamente 4 dígitos numéricos");
+  const correlativeCode = body.correlativeCode == null || body.correlativeCode === "" ? null : body.correlativeCode;
+  if (correlativeCode !== null && (typeof correlativeCode !== "string" || !/^[0-9]{4}$/.test(correlativeCode))) throw new InvalidRecord("El código de correlativo debe tener exactamente 4 dígitos numéricos si se ingresa");
   const travelMode = body.travelMode ?? "NONE";
   if (!Object.values(TravelMode).includes(travelMode as TravelMode)) throw new InvalidRecord("Viáticos inválidos");
   const courseIds = selectedIds(body.courseIds === undefined ? [body.courseId] : body.courseIds, 'Cursos');
@@ -76,7 +77,7 @@ export function serviceInput(body: Record<string, unknown>) {
     return { date: day, startTime: startTime as string | null, endTime: endTime as string | null,
       modality: (modality === 'MIXED' ? session!.modality : modality) as ClassModality | null };
   });
-  return { ...common({ ...body, courseId: courseIds[0] }), courseIds, company: text(body.company, "Cliente"), correlativeCode: body.correlativeCode,
+  return { ...common({ ...body, courseId: courseIds[0] }), courseIds, company: text(body.company, "Cliente"), correlativeCode: correlativeCode as string | null,
     requestedInvoiceDate: invoiceDate(body.invoiceDate), travelMode: travelMode as TravelMode, serviceDate: dates[0], dates, sessions, modality: modality as ClassModality | null, certificatesOnly: body.certificatesOnly,
     instructorIds, instructorId: instructorIds[0] ?? null,
     locationId: body.locationId == null || body.locationId === "" ? null : text(body.locationId, "Ubicación", 100) };
