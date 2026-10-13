@@ -13,10 +13,10 @@ export async function GET(req: Request) {
       where: { ...datesWhere(dates), ...(excluded ? { id: { not: excluded } } : {}) },
       select: { instructorId: true, instructors:{select:{id:true}}, serviceDate: true, dates: { select: { date: true } } }
     });
-    const selected = new Set(dates.map(d => d.toISOString().slice(0, 10)));
+    const selected = new Set(dates.filter((d): d is Date => !!d).map(d => d.toISOString().slice(0, 10)));
     const conflicts: Record<string, string[]> = {};
     for (const s of booked) {
-      const days = [s.serviceDate, ...s.dates.map(d => d.date)].map(d => d.toISOString().slice(0, 10)).filter(d => selected.has(d));
+      const days = [s.serviceDate, ...s.dates.map(d => d.date)].filter((d): d is Date => !!d).map(d => d.toISOString().slice(0, 10)).filter(d => selected.has(d));
       for (const id of new Set([s.instructorId,...s.instructors.map(i=>i.id)].filter((id):id is string=>!!id))) conflicts[id] = [...new Set([...(conflicts[id] ?? []), ...days])].sort();
     }
     return NextResponse.json({ conflicts });

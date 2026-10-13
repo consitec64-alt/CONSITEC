@@ -1,9 +1,10 @@
+import { scheduledServiceStatus } from "@/lib/service-status";
 import { quotationOwner, lockQuotation, QuotationError } from "@/lib/quotations";
 import { assertMonthsOpen } from '@/lib/monthly-close';
 import { audit } from "@/lib/audit";
 import { currentUser } from "@/lib/current-user";
 import { serviceDuplicates, PossibleDuplicate } from "@/lib/duplicates";
-import { assignedSalesperson } from "@/lib/assigned-salesperson";
+import { recordSalesperson } from "@/lib/assigned-salesperson";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { invoiceDateFor } from "@/lib/invoice-date";
@@ -22,6 +23,7 @@ export function datesWhere(days: Date[]): Prisma.ServiceWhereInput {
 }
 export class InstructorUnavailable extends Error {}
 export async function assertInstructorsAvailable(tx: Prisma.TransactionClient, instructorIds: string[], dates: Date[], exclude?: string) {
+  if (!dates.length) return;
   // Lock in a consistent order to prevent deadlocks for overlapping teams.
   for (const instructorId of [...instructorIds].sort()) {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${instructorId}))::text`;
@@ -33,15 +35,15 @@ export async function assertInstructorsAvailable(tx: Prisma.TransactionClient, i
     });
     if (conflict) {
       const instructor = await tx.instructor.findUnique({where:{id:instructorId}});
-      const booked = new Set([conflict.serviceDate,...conflict.dates.map(d=>d.date)].map(d=>d.toISOString().slice(0,10)));
-      const occupied = dates.filter(d=>booked.has(d.toISOString().slice(0,10))).map(d=>d.toISOString().slice(0,10)).join(', ');
+      const booked = new Set([conflict.serviceDate,...conflict.dates.map(d=>d.date)].filter((d): d is Date => !!d).map(d=>d.toISOString().slice(0,10)));
+      const occupied = dates.filter(d=>booked.has(d.toISOString().slice(0,10))).filter((d): d is Date => !!d).map(d=>d.toISOString().slice(0,10)).join(', ');
       throw new InstructorUnavailable(`${instructor?.name || 'El instructor'} no está disponible para la fecha: ${occupied}`);
     }
   }
 }
 export async function writeService(body: Record<string, unknown>, id?: string, userId?: string, quotationId?: string) {
   const actor = await currentUser();
-  if (!actor) throw new InvalidRecord("Debes iniciar sesión");
+  if (!actor || actor.role === "SUPERVISOR") throw new InvalidRecord("Debes iniciar sesión");
   return prisma.$transaction(async tx => {
     const quotation = quotationId ? (await lockQuotation(tx, quotationId), await tx.quotation.findFirstOrThrow({where:{id:quotationId,...quotationOwner(actor)},include:{courses:true}})) : null;
     if (quotation?.serviceId) return tx.service.findUniqueOrThrow({where:{id:quotation.serviceId},include:serviceInclude});
@@ -49,11 +51,12 @@ export async function writeService(body: Record<string, unknown>, id?: string, u
     if (quotation && quotation.status !== 'ACCEPTED') throw new QuotationError('Primero marca la cotización como Aceptada',409);
     if (quotation) body = {...body,company:quotation.company,amount:String(quotation.amount),courseIds:quotation.courses.map(c=>c.id),modality:quotation.modality ?? body.modality,certificatesOnly:false,status:'SCHEDULED'};
     const { dates, sessions, courseIds, instructorIds, requestedInvoiceDate, ...data } = serviceInput(body);
+    if (!data.certificatesOnly) data.status = scheduledServiceStatus(data.status, dates) as typeof data.status;
     if (id) await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))::text`;
     const existing = id ? await tx.service.findUniqueOrThrow({ where: { id, deletedAt: null }, include: serviceInclude }) : undefined;
     if (await tx.course.count({ where: { id: { in: courseIds } } }) !== courseIds.length) throw new InvalidRecord("Uno de los cursos seleccionados ya no existe");
     if(existing?.certificateSaleId)throw new InvalidRecord('Edita la venta vinculada desde Venta de certificados');
-    const salespersonId = existing?.salespersonId ?? quotation?.salespersonId ?? await assignedSalesperson(tx, userId);
+    const salespersonId = quotation?.salespersonId ?? await recordSalesperson(tx, actor, body.salespersonId, existing?.salespersonId);
     const duplicates = await serviceDuplicates(tx, data.company, courseIds, dates, id);
     const invoicedAt = invoiceDateFor(data.status, requestedInvoiceDate, existing);
     await assertMonthsOpen(tx, existing, { ...data, dates: sessions, invoicedAt });

@@ -1,3 +1,4 @@
+import { recordSalesperson } from "@/lib/assigned-salesperson";
 import { syncCertificateAgenda } from "@/lib/certificate-agenda";
 import { assertMonthsOpen } from '@/lib/monthly-close';
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const duplicates = await saleDuplicates(tx, data.customerName, courseIds, data.saleDate, id);
       if (duplicates.length && body.allowDuplicate !== true) throw new PossibleDuplicate(duplicates);
       if (await tx.course.count({where:{id:{in:courseIds}}}) !== courseIds.length) throw new InvalidRecord("Uno de los cursos seleccionados ya no existe");
-      const saved = await tx.certificateSale.update({ where: { id }, data: { ...data, invoicedAt, courses:{set:courseIds.map(id=>({id}))} }, include: { course: true, courses: true, salesperson: true } });
+      const saved = await tx.certificateSale.update({ where: { id }, data: { ...data, salespersonId: await recordSalesperson(tx, actor, body.salespersonId, existing.salespersonId), invoicedAt, courses:{set:courseIds.map(id=>({id}))} }, include: { course: true, courses: true, salesperson: true } });
       await syncCertificateAgenda(tx,saved,courseIds,actor);
       await audit(tx, actor, "CERTIFICATE", "UPDATE", existing, saved);
       return saved;

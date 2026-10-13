@@ -19,7 +19,7 @@ export async function POST() {
         select: { id: true, company: true, modality: true, course: { select: { name: true } }, courses: { select: { name: true } }, instructor: { select: { name: true } }, instructors: { select: { name: true } }, salesperson: { select: { name: true } }, location: { select: { department: true, district: true } }, dates: { where: { date: { gte: start, lt: end } }, select: { startTime: true, endTime: true, modality: true } } },
         orderBy: { company: 'asc' }
       });
-      const classes = services.map(s => ({ id: s.id, company: s.company, courses: (s.courses.length ? s.courses : [s.course]).map(c => c.name), instructors: (s.instructors.length ? s.instructors : s.instructor ? [s.instructor] : []).map(i => i.name), commercial: s.salesperson.name, startTime: s.dates[0]?.startTime ?? null, endTime: s.dates[0]?.endTime ?? null, modality: dayModality(s.modality, s.dates[0]?.modality), location: s.location ? `${s.location.department} / ${s.location.district}` : null }));
+      const classes = services.map(s => ({ id: s.id, company: s.company, courses: (s.courses.length ? s.courses : [s.course]).map(c => c.name), instructors: (s.instructors.length ? s.instructors : s.instructor ? [s.instructor] : []).map(i => i.name), commercial: s.salesperson?.name ?? "Sin asignar", startTime: s.dates[0]?.startTime ?? null, endTime: s.dates[0]?.endTime ?? null, modality: dayModality(s.modality, s.dates[0]?.modality), location: s.location ? `${s.location.department} / ${s.location.district}` : null }));
       classes.sort((a,b) => (a.startTime ?? '99:99').localeCompare(b.startTime ?? '99:99') || a.company.localeCompare(b.company));
       return classes.length ? { day, classes } : null;
     });

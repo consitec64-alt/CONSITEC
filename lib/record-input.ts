@@ -14,10 +14,10 @@ function date(value: unknown) {
   if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value.slice(0, 10)) throw new InvalidRecord("Fecha inválida");
   return parsed;
 }
-function common(body: Record<string, unknown>) {
-  const amount = body.amount;
+function common(body: Record<string, unknown>, service = false) {
+  const amount = service && (body.amount == null || body.amount === "") ? 0 : body.amount;
   if ((typeof amount !== "number" && typeof amount !== "string") || !/^\d+(?:\.\d{1,2})?$/.test(String(amount)) ||
-      !Number.isFinite(Number(amount)) || Number(amount) <= 0 || Number(amount) > 99999999.99) throw new InvalidRecord("Ingresa un importe válido mayor a cero, con hasta dos decimales");
+      !Number.isFinite(Number(amount)) || (service ? Number(amount) < 0 : Number(amount) <= 0) || Number(amount) > 99999999.99) throw new InvalidRecord(service ? "Ingresa un importe válido, con hasta dos decimales" : "Ingresa un importe válido mayor a cero, con hasta dos decimales");
   if (!Object.values(ServiceStatus).includes(body.status as ServiceStatus)) throw new InvalidRecord("Estado inválido");
   return { amount: new Prisma.Decimal(amount), courseId: text(body.courseId, "Curso", 100), status: body.status as ServiceStatus };
 }
@@ -55,18 +55,22 @@ export function serviceDates(values: unknown): Date[] {
 export function serviceInput(body: Record<string, unknown>) {
   if (!body || typeof body !== "object") throw new InvalidRecord("Solicitud inválida");
   if (body.status === "PAID") throw new InvalidRecord("Pagado solo se usa para certificados de personas naturales");
-  if (typeof body.certificatesOnly !== "boolean") throw new InvalidRecord("Selecciona el tipo de servicio");
+  if (body.certificatesOnly !== undefined && typeof body.certificatesOnly !== "boolean") throw new InvalidRecord("Selecciona el tipo de servicio");
   const correlativeCode = body.correlativeCode == null || body.correlativeCode === "" ? null : body.correlativeCode;
   if (correlativeCode !== null && (typeof correlativeCode !== "string" || !/^[0-9]{4}$/.test(correlativeCode))) throw new InvalidRecord("El código de correlativo debe tener exactamente 4 dígitos numéricos si se ingresa");
   const travelMode = body.travelMode ?? "NONE";
   if (!Object.values(TravelMode).includes(travelMode as TravelMode)) throw new InvalidRecord("Viáticos inválidos");
   const courseIds = selectedIds(body.courseIds === undefined ? [body.courseId] : body.courseIds, 'Cursos');
-  const instructorIds = selectedIds(body.instructorIds === undefined ? (body.instructorId ? [body.instructorId] : []) : body.instructorIds, 'Instructores', true);
+  const instructorIds = selectedIds(body.instructorIds === undefined ? (body.instructorId ? [body.instructorId] : []) : body.instructorIds, 'Instructores');
   const modality = body.modality || null;
   if (modality !== null && !Object.values(ClassModality).includes(modality as ClassModality)) throw new InvalidRecord("Modalidad inválida");
   const rawSessions = body.sessions;
-  if (rawSessions !== undefined && (!Array.isArray(rawSessions) || !rawSessions.length || rawSessions.length > 366)) throw new InvalidRecord("Agrega entre 1 y 366 fechas al servicio");
-  const dates = serviceDates(rawSessions ? (rawSessions as Record<string, unknown>[]).map(session => session?.date) : body.serviceDates ?? [body.serviceDate]);
+  if (rawSessions !== undefined && (!Array.isArray(rawSessions) || rawSessions.length > 366)) throw new InvalidRecord("Agrega entre 1 y 366 fechas al servicio");
+  const values = rawSessions ? (rawSessions as Record<string, unknown>[]).map(session => session?.date) : body.serviceDates ?? [body.serviceDate];
+  if (!Array.isArray(values)) throw new InvalidRecord("Fechas inválidas");
+  const selected = values.filter(value => value != null && value !== "");
+  const dates = selected.length ? serviceDates(selected) : [];
+  if (Array.isArray(rawSessions) && rawSessions.some(session => !session?.date && (session?.startTime || session?.endTime))) throw new InvalidRecord("Indica la fecha del horario");
   const sessions = dates.map(day => {
     const matching = Array.isArray(rawSessions) ? rawSessions.filter(session => typeof session?.date === "string" && session.date.slice(0, 10) === day.toISOString().slice(0, 10)) : [];
     if (matching.length > 1) throw new InvalidRecord("Cada fecha debe aparecer una sola vez");
@@ -77,8 +81,8 @@ export function serviceInput(body: Record<string, unknown>) {
     return { date: day, startTime: startTime as string | null, endTime: endTime as string | null,
       modality: (modality === 'MIXED' ? session!.modality : modality) as ClassModality | null };
   });
-  return { ...common({ ...body, courseId: courseIds[0] }), courseIds, company: text(body.company, "Cliente"), correlativeCode: correlativeCode as string | null,
-    requestedInvoiceDate: invoiceDate(body.invoiceDate), travelMode: travelMode as TravelMode, serviceDate: dates[0], dates, sessions, modality: modality as ClassModality | null, certificatesOnly: body.certificatesOnly,
+  return { ...common({ ...body, status: body.status || "SCHEDULED", courseId: courseIds[0] }, true), courseIds, company: text(body.company, "Cliente"), correlativeCode: correlativeCode as string | null,
+    requestedInvoiceDate: invoiceDate(body.invoiceDate), travelMode: travelMode as TravelMode, serviceDate: dates[0] ?? null, dates, sessions, modality: modality as ClassModality | null, certificatesOnly: body.certificatesOnly === true,
     instructorIds, instructorId: instructorIds[0] ?? null,
     locationId: body.locationId == null || body.locationId === "" ? null : text(body.locationId, "Ubicación", 100) };
 }

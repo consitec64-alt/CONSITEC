@@ -1,3 +1,4 @@
+import { executePastServices } from "@/lib/service-status";
 export const dynamic = "force-dynamic";
 
 import { Prisma } from "@prisma/client";
@@ -9,6 +10,7 @@ import { defaultWeekRanges, validateWeekRanges, weekDefinitions, weekForDate } f
 import { parsePeriod, monthKey } from "@/lib/monthly-close";
 
 export async function GET(req: Request) {
+  await executePastServices();
   try {
     const { searchParams } = new URL(req.url);
     const month = Number(searchParams.get("month"));
@@ -37,7 +39,7 @@ export async function GET(req: Request) {
     ].filter(Boolean)).size;
     // Allocate the estimated amount once, in the month of the first date, even when the
     // same service appears on multiple agenda days or continues next month.
-    const billingServices = services.filter(s => s.serviceDate >= start && s.serviceDate < end);
+    const billingServices = services.filter(s => s.serviceDate && s.serviceDate >= start && s.serviceDate < end);
     // Certificate-only agenda entries are scheduling copies; certificate revenue
     // is counted from company certificate sales, never from those copies.
     const [invoicedServices, invoicedCertificates] = await Promise.all([
@@ -49,10 +51,10 @@ export async function GET(req: Request) {
     const totalInvoicedBilling = invoiced.reduce((sum, s) => sum.plus(s.amount), new Prisma.Decimal(0)).toNumber();
     const invoicedBySalesperson: Record<string, number> = {};
     for (const s of invoiced) {
-      const name = s.salesperson.name;
+      const name = s.salesperson?.name ?? "Sin asignar";
       invoicedBySalesperson[name] = new Prisma.Decimal(invoicedBySalesperson[name] ?? 0).plus(s.amount).toNumber();
     }
-    const daysInMonth = (s: typeof services[number]) => [...new Map((s.dates.length ? s.dates.map(d => d.date) : [s.serviceDate]).filter(d => d >= start && d < end).map(d => [d.toISOString().slice(0, 10), d])).values()];
+    const daysInMonth = (s: typeof services[number]) => [...new Map((s.dates.length ? s.dates.map(d => d.date) : [s.serviceDate]).filter((d): d is Date => !!d && d >= start && d < end).map(d => [d.toISOString().slice(0, 10), d])).values()];
     const totalServices = services.reduce((sum, s) => sum + daysInMonth(s).length, 0);
     // Public report identity/color only; the commercial support catalog remains admin-only.
     const reportSalespeople = await prisma.salesperson.findMany({ select: { id: true, name: true, color: true }, orderBy: { name: "asc" } });
