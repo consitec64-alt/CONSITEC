@@ -444,3 +444,6 @@ html[data-text-size]:not([data-text-size=normal]) small{font-size:calc(11px * va
 .welcome-content p { color: #50677a; }
 .welcome-enter { background: #185881; border-color: #185881; color: #fff; }
 .welcome-enter:hover { background: #123e5c; }
+
+.calendar-heading-actions { display:flex; align-items:center; flex-wrap:wrap; gap:14px; }
+@media(max-width:760px){.calendar-panel>.section-heading{flex-wrap:wrap;gap:14px}.calendar-heading-actions{width:100%}.calendar-heading-actions .btn{width:100%;justify-content:center}}
