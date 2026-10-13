@@ -184,7 +184,7 @@ export default function Dashboard() {
     const formData = new FormData(e.currentTarget);
     const values = Object.fromEntries(formData);
     const amount = Number(values.amount);
-    if (!Number.isFinite(amount) || (modal === "sale" ? amount <= 0 : amount < 0)) return announce("Ingresa un importe mayor a cero.", true);
+    if (!Number.isFinite(amount) || amount < 0) return announce("Ingresa un importe válido.", true);
     setBusy(true);
     try {
       if (modal === "service") {
@@ -260,7 +260,7 @@ export default function Dashboard() {
     </main>
     {notice && <div className={`toast ${notice.error ? "toast-error" : ""}`} role={notice.error ? "alert" : "status"}>{notice.error ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}<span>{notice.text}</span><button className="icon-button" aria-label="Cerrar notificación" onClick={() => setNotice(null)}><X size={17} /></button></div>}
     {modal && <Dialog className="record-dialog" title={editingRecord ? (modal === "service" ? "Editar servicio" : "Editar venta de certificado") : (modal === "service" ? "Nuevo servicio" : "Nueva venta de certificado")} onClose={() => { if (!busy) setModal(null); }}>
-      <p className="dialog-intro">{editingRecord ? "Actualiza los datos del registro." : modal === "service" ? "Completa la empresa, el curso y el instructor." : "Completa los datos de la venta."}</p>
+      <p className="dialog-intro">{editingRecord ? "Actualiza los datos del registro." : modal === "service" ? "Completa la empresa, el curso, el instructor y la fecha." : "Completa el cliente, el curso y la fecha."}</p>
       <form ref={recordForm} key={editingRecord?.id || (activeDraft?draft?.updatedAt:modal)} onSubmit={saveRecord}>
         {modal==='sale' ? <CertificateFields sale={editingSale} courses={meta.courses} onCustomerTypeChange={setSaleCustomerType} previewCompany={!!tutorial?.target.match(/correlativeCode|invoiceDate/)}/>:<>
           <section className="record-section"><div className="record-section-title"><span>01</span><div><h3>Cliente y referencia</h3><p>Identifica el servicio.</p></div></div><div className="form-grid"><label className="full-width">Empresa / cliente<input name="company" placeholder="Nombre o razón social" maxLength={200} defaultValue={editingService?.company || activeDraft?.company || ""} required/></label><label>Código de correlativo <input name="correlativeCode" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} defaultValue={editingService?.correlativeCode||activeDraft?.correlativeCode||''} placeholder="Ej. 0042" title="Si se ingresa, exactamente 4 dígitos numéricos"/></label></div></section>
@@ -270,7 +270,7 @@ export default function Dashboard() {
         <section className="record-section"><div className="record-section-title"><span>{modal==='sale'?'03':'04'}</span><div><h3>Importe y facturación</h3><p>Un importe total para todo el registro.</p></div></div><div className="form-grid">
           {modal==='sale'&&<label>Fecha de venta<input name="saleDate" type="date" defaultValue={editingSale?.saleDate.slice(0,10)||format(new Date(period.year,period.month-1,selectedDay??1),'yyyy-MM-dd')} required/></label>}
           {(modal==='service'||saleCustomerType==='COMPANY'||!!tutorial?.target.includes('invoiceDate'))&&<label>Fecha de facturación <input name="invoiceDate" type="date" defaultValue={editingRecord?.invoicedAt?.slice(0,10)||activeDraft?.invoiceDate||''}/><small>Al marcar Facturado se usará hoy si está vacía.</small></label>}
-          <label>Importe total (S/)<input name="amount" type="number" min={modal==="sale"?"0.01":"0"} max="99999999.99" step="0.01" placeholder="0.00" defaultValue={editingRecord?.amount||activeDraft?.amount||""} required={modal==="sale"}/></label>
+          <label>Importe total (S/)<input name="amount" type="number" min="0" max="99999999.99" step="0.01" placeholder="0.00" defaultValue={editingRecord?.amount||activeDraft?.amount||""}/></label>
           <label>Estado<select required name="status" key={saleCustomerType} defaultValue={modal==='sale' ? (editingSale?.customerType===saleCustomerType ? ((saleCustomerType==='COMPANY'?['SCHEDULED','INVOICED']:['SCHEDULED','PAID']).includes(editingSale.status)?editingSale.status:'') : 'SCHEDULED') : editingRecord?.status||activeDraft?.status||'SCHEDULED'}>{modal==='sale'&&editingSale?.customerType===saleCustomerType&&!(saleCustomerType==='COMPANY'?['SCHEDULED','INVOICED']:['SCHEDULED','PAID']).includes(editingSale.status)&&<option value="" disabled>Revisa el estado anterior</option>}{Object.entries(modal==='sale' ? (saleCustomerType==='COMPANY'?{SCHEDULED:'Pendiente',INVOICED:'Facturado'}:{SCHEDULED:'Pendiente',PAID:'Pagado'}) : statuses).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
           {modal==='service'&&<details className="optional-fields full-width"><summary>Opciones adicionales</summary><label className="checkbox-label"><input name="certificatesOnly" type="checkbox" defaultChecked={editingService?.certificatesOnly||activeDraft?.certificatesOnly==='on'}/>Solo certificados</label></details>}
         </div></section>
