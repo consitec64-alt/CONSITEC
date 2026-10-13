@@ -1,0 +1,3 @@
+ALTER TABLE "Service" ALTER COLUMN "serviceDate" DROP NOT NULL;
+ALTER TABLE "Service" ALTER COLUMN "salespersonId" DROP NOT NULL;
+ALTER TABLE "CertificateSale" ALTER COLUMN "salespersonId" DROP NOT NULL;

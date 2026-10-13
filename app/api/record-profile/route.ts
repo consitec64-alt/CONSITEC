@@ -25,15 +25,15 @@ export async function GET(req: Request) {
     if (entity === 'QUOTATION') {
       const row = await prisma.quotation.findFirst({ where: { id, ...quotationOwner(actor) }, select: { salesperson: { select: { name: true } } } });
       if (!row) return NextResponse.json({ error: 'Registro no disponible' }, { status: 404 });
-      commercial = row.salesperson.name;
+      commercial = row.salesperson?.name;
     } else if (entity === 'CERTIFICATE') {
       const row = await prisma.certificateSale.findFirst({ where: { id, deletedAt: null }, select: { salesperson: { select: { name: true } } } });
       if (!row) return NextResponse.json({ error: 'Registro no disponible' }, { status: 404 });
-      commercial = row.salesperson.name;
+      commercial = row.salesperson?.name;
     } else {
       const row = await prisma.service.findFirst({ where: { id, deletedAt: null }, select: { certificateSaleId: true, salesperson: { select: { name: true } } } });
       if (!row) return NextResponse.json({ error: 'Registro no disponible' }, { status: 404 });
-      commercial = row.salesperson.name;
+      commercial = row.salesperson?.name;
       // An agenda copy represents the original certificate sale, not its later editor.
       if (row.certificateSaleId) { recordId = row.certificateSaleId; source = 'CERTIFICATE'; }
     }

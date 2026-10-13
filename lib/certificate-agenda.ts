@@ -3,7 +3,7 @@ import { audit, Actor } from '@/lib/audit';
 import { assertInstructorsAvailable } from '@/lib/service-scheduling';
 import { assertMonthsOpen } from '@/lib/monthly-close';
 
-export async function syncCertificateAgenda(tx: Prisma.TransactionClient, sale: {id:string;customerType:string;customerName:string;amount:Prisma.Decimal;saleDate:Date;status:string;invoicedAt:Date|null;correlativeCode:string|null;courseId:string;salespersonId:string;deletedAt:Date|null}, courseIds:string[], actor:Actor) {
+export async function syncCertificateAgenda(tx: Prisma.TransactionClient, sale: {id:string;customerType:string;customerName:string;amount:Prisma.Decimal;saleDate:Date;status:string;invoicedAt:Date|null;correlativeCode:string|null;courseId:string;salespersonId:string|null;deletedAt:Date|null}, courseIds:string[], actor:Actor) {
  const before=await tx.service.findUnique({where:{certificateSaleId:sale.id},include:{dates:true,courses:true,instructors:true}});
  const eligible=sale.customerType==='COMPANY'&&sale.amount.greaterThan(700)&&!sale.deletedAt;
  if(before)await assertMonthsOpen(tx,before);

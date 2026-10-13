@@ -122,7 +122,7 @@ model Service {
   dates            ServiceDay[]
   registerConfirmations InstructorConfirmation[]
   amount           Decimal       @db.Decimal(10, 2)
-  serviceDate      DateTime
+  serviceDate      DateTime?
   certificatesOnly Boolean       @default(false)
   status           ServiceStatus @default(SCHEDULED)
   invoicedAt       DateTime?
@@ -132,14 +132,14 @@ model Service {
   courseId       String
   instructorId   String?     // 👈 OPCIONAL
   locationId     String?     // 👈 OPCIONAL
-  salespersonId  String
+  salespersonId  String?
 
   course        Course      @relation(fields: [courseId], references: [id])
   courses       Course[] @relation("ServiceCourses")
   instructors   Instructor[] @relation("ServiceInstructors")
   instructor    Instructor? @relation(fields: [instructorId], references: [id], onDelete: SetNull)
   location      Location?   @relation(fields: [locationId], references: [id])
-  salesperson   Salesperson @relation(fields: [salespersonId], references: [id])
+  salesperson   Salesperson? @relation(fields: [salespersonId], references: [id])
 
   @@index([serviceDate])
   @@index([invoicedAt])
@@ -173,11 +173,11 @@ model CertificateSale {
   createdAt     DateTime      @default(now())
 
   courseId      String
-  salespersonId String
+  salespersonId String?
 
   courses       Course[] @relation("CertificateCourses")
   course        Course       @relation(fields: [courseId], references: [id])
-  salesperson   Salesperson  @relation(fields: [salespersonId], references: [id])
+  salesperson   Salesperson? @relation(fields: [salespersonId], references: [id])
 
   @@index([saleDate])
   @@index([invoicedAt])

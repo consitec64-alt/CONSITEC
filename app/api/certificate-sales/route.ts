@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import { audit } from "@/lib/audit";
 import { saleDuplicates, PossibleDuplicate } from "@/lib/duplicates";
 import { currentUser } from "@/lib/current-user";
-import { assignedSalesperson } from "@/lib/assigned-salesperson";
+import { recordSalesperson } from "@/lib/assigned-salesperson";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { invoiceDateFor } from "@/lib/invoice-date";
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       await assertMonthsOpen(tx, {...data,invoicedAt});
       const duplicates = await saleDuplicates(tx, data.customerName, courseIds, data.saleDate);
       if (duplicates.length && body.allowDuplicate !== true) throw new PossibleDuplicate(duplicates);
-      const salespersonId = await assignedSalesperson(tx, actor?.id);
+      const salespersonId = await recordSalesperson(tx, actor, body.salespersonId);
       if (await tx.course.count({where:{id:{in:courseIds}}}) !== courseIds.length) throw new InvalidRecord('Uno de los cursos seleccionados ya no existe');
       const sale = await tx.certificateSale.create({ data: { ...data, salespersonId, invoicedAt, courses:{connect:courseIds.map(id=>({id}))} }, include:{course:true,courses:true,salesperson:true} });
       await syncCertificateAgenda(tx,sale,courseIds,actor);

@@ -1,7 +1,7 @@
 export type DraftValues = Record<string, string | string[]>;
 export type ServiceDraft = { values: DraftValues; updatedAt: string };
 export type DraftSession = { date: string; startTime: string; endTime: string; modality: string };
-const fields = ['company','correlativeCode','courseIds','instructorIds','sessions','modality','locationId','invoiceDate','travelMode','amount','status','certificatesOnly'];
+const fields = ['company','salespersonId','correlativeCode','courseIds','instructorIds','sessions','modality','locationId','invoiceDate','travelMode','amount','status','certificatesOnly'];
 export function draftSessions(value: unknown): DraftSession[] | null {
   if (typeof value !== 'string') return null;
   try { const rows = JSON.parse(value); if (!Array.isArray(rows) || rows.length < 1 || rows.length > 366 || rows.some(row => !row || ['date','startTime','endTime','modality'].some(key => typeof row[key] !== 'string' || row[key].length > 40))) return null; return rows.map(row => ({date:row.date,startTime:row.startTime,endTime:row.endTime,modality:row.modality})); } catch { return null; }

@@ -15,7 +15,7 @@ export function parsePeriod(year: unknown, month: unknown): Period | null {
   const y=Number(year),m=Number(month);
   return Number.isInteger(y)&&y>=2000&&y<=2100&&Number.isInteger(m)&&m>=1&&m<=12 ? {year:y,month:m}:null;
 }
-type FinancialRecord = { serviceDate?: Date; saleDate?: Date; invoicedAt?: Date | null; status?: string; dates?: {date:Date}[] };
+type FinancialRecord = { serviceDate?: Date | null; saleDate?: Date; invoicedAt?: Date | null; status?: string; dates?: {date:Date}[] };
 export function recordMonths(...records: (FinancialRecord | undefined)[]) {
   return [...new Set(records.flatMap(row=>row ? [row.serviceDate,row.saleDate,...(row.dates??[]).map(d=>d.date),row.status==='INVOICED'?(row.invoicedAt??row.serviceDate??row.saleDate):null].filter((d):d is Date=>!!d).map(d=>d.toISOString().slice(0,7)):[]))].sort();
 }

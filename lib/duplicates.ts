@@ -4,13 +4,14 @@ export class PossibleDuplicate extends Error {
   constructor(public matches: { id: string; name: string; date: string; amount: string }[]) { super('Hay registros con el mismo cliente, curso y fecha. Revisa si son ventas diferentes antes de continuar.'); }
 }
 export async function serviceDuplicates(tx: Prisma.TransactionClient, company: string, courseIds: string[], dates: Date[], exclude?: string) {
+  if (!dates.length) return [];
   // Serialize same-customer writes across overlapping dates, avoiding simultaneous silent duplicates.
   for (const day of dates) await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`duplicate:${customerKey(company)}:${day.toISOString().slice(0,10)}`}))::text`;
   const rows = await tx.service.findMany({ where: { deletedAt: null, ...(exclude ? { id: { not: exclude } } : {}), AND: [
     { OR: dates.flatMap(day => { const start = new Date(day.toISOString().slice(0,10)+"T00:00:00Z"), end = new Date(start.getTime()+86400000); return [{serviceDate:{gte:start,lt:end}},{dates:{some:{date:{gte:start,lt:end}}}}]; }) },
     { OR: [{ courseId: { in: courseIds } }, { courses: { some: { id: { in: courseIds } } } }] }
   ] } });
-  return rows.filter(r => customerKey(r.company) === customerKey(company)).map(r => ({ id: r.id, name: r.company, date: r.serviceDate.toISOString().slice(0,10), amount: r.amount.toString() }));
+  return rows.filter(r => customerKey(r.company) === customerKey(company)).map(r => ({ id: r.id, name: r.company, date: r.serviceDate?.toISOString().slice(0,10) ?? dates[0].toISOString().slice(0,10), amount: r.amount.toString() }));
 }
 export async function saleDuplicates(tx: Prisma.TransactionClient, name: string, courseIds: string[], date: Date, exclude?: string) {
   const day = date.toISOString().slice(0,10);

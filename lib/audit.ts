@@ -5,7 +5,7 @@ function snapshot(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value, (key, v) => /password|token|secret/i.test(key) ? undefined : v));
 }
 export async function audit(tx: Prisma.TransactionClient, actor: Actor, entity: string, action: string, before: unknown, after: unknown) {
-  const row = (after ?? before) as { id: string; company?: string; customerName?: string; name?: string; username?: string; salespersonId?: string; district?: string };
+  const row = (after ?? before) as { id: string; company?: string; customerName?: string; name?: string; username?: string; salespersonId?: string | null; district?: string };
   await tx.auditLog.create({ data: { actorId: actor.id, actorName: actor.username, entity, action, recordId: row.id,
     label: row.company ?? row.customerName ?? row.name ?? row.username ?? row.district ?? row.id,
     salespersonId: row.salespersonId ?? null, ...(before ? { before: snapshot(before) } : {}), ...(after ? { after: snapshot(after) } : {}) } });

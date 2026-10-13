@@ -5,10 +5,10 @@ export type Meta = {
 };
 export type Service = {
   id: string; certificateSaleId?:string|null; company: string; correlativeCode: string | null; travelMode: 'NONE' | 'PLANE' | 'BUS';
-  amount: string; invoicedAt?: string | null; serviceDate: string; dates?: { modality?: 'VIRTUAL' | 'IN_PERSON' | null; date: string; startTime?: string | null; endTime?: string | null }[]; modality?: 'VIRTUAL' | 'IN_PERSON' | 'MIXED' | null; certificatesOnly: boolean;
-  status: string; courses?: Meta[]; course: Meta; instructor: Meta | null; instructors?: Meta[]; location: Meta | null; salesperson: Meta;
+  amount: string; invoicedAt?: string | null; serviceDate: string | null; dates?: { modality?: 'VIRTUAL' | 'IN_PERSON' | null; date: string; startTime?: string | null; endTime?: string | null }[]; modality?: 'VIRTUAL' | 'IN_PERSON' | 'MIXED' | null; certificatesOnly: boolean;
+  status: string; courses?: Meta[]; course: Meta; instructor: Meta | null; instructors?: Meta[]; location: Meta | null; salesperson: Meta | null;
 };
-export const serviceDays = (service: Service) => [...new Set([service.serviceDate, ...(service.dates ?? []).map(d => d.date)].map(d => d.slice(0, 10)))].sort();
+export const serviceDays = (service: Service) => [...new Set([service.serviceDate, ...(service.dates ?? []).map(d => d.date)].filter((d): d is string => !!d).map(d => d.slice(0, 10)))].sort();
 
 export const serviceCourses = (service: Service) => service.courses?.length ? service.courses : [service.course];
 

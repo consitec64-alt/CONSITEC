@@ -1,3 +1,4 @@
+import { executePastServices } from "@/lib/service-status";
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -10,6 +11,7 @@ import { currentUser } from "@/lib/current-user";
 import { audit } from "@/lib/audit";
 
 export async function GET(req: Request) {
+  await executePastServices();
   try {
     const actor = await currentUser();
     if (!actor) return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 });
@@ -30,7 +32,7 @@ export async function GET(req: Request) {
       include: { ...serviceInclude, registerConfirmations: { select: { date: true, instructorId: true, confirmed: true } } }, orderBy: [{ serviceDate: 'asc' }, { id: 'asc' }]
     });
     const confirmedIds = new Set(services.flatMap(s => s.registerConfirmations.filter(c => c.confirmed).map(c => `${s.id}:${c.date}:${c.instructorId}`)));
-    const rows = services.flatMap(s => (s.dates.length ? s.dates : [{ date: s.serviceDate, startTime: null, endTime: null, modality: null }]).filter(d => d.date >= start && d.date < end && (!modality || modality === 'MIXED' || dayModality(s.modality, d.modality) === modality)).flatMap(d => (s.instructors.length ? s.instructors : s.instructor ? [s.instructor] : [{id:"unassigned",name:"Sin asignar"}]).filter(i=>!instructorId||i.id===instructorId).map(instructor => ({
+    const rows = services.flatMap(s => (s.dates.length ? s.dates : s.serviceDate ? [{ date: s.serviceDate, startTime: null, endTime: null, modality: null }] : []).filter(d => d.date >= start && d.date < end && (!modality || modality === 'MIXED' || dayModality(s.modality, d.modality) === modality)).flatMap(d => (s.instructors.length ? s.instructors : s.instructor ? [s.instructor] : [{id:"unassigned",name:"Sin asignar"}]).filter(i=>!instructorId||i.id===instructorId).map(instructor => ({
       id: `${s.id}:${d.date.toISOString().slice(0, 10)}:${instructor.id}`, date: d.date.toISOString().slice(0, 10),
       serviceId: s.id, instructorId: instructor.id,
       confirmed: confirmedIds.has(`${s.id}:${d.date.toISOString().slice(0, 10)}:${instructor.id}`),
@@ -56,7 +58,7 @@ export async function PATCH(req: Request) {
       // Same lock used by service edits/trash: validate the current row and save atomically.
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${body.serviceId}))::text`;
       const service = await tx.service.findUniqueOrThrow({ where: { id: body.serviceId, deletedAt: null }, include: serviceInclude });
-      const dates = service.dates.length ? service.dates.map(d => d.date) : [service.serviceDate];
+      const dates = service.dates.length ? service.dates.map(d => d.date) : service.serviceDate ? [service.serviceDate] : [];
       const instructors = service.instructors.length ? service.instructors : service.instructor ? [service.instructor] : [{ id: 'unassigned', name: 'Sin asignar' }];
       const instructor = instructors.find(i => i.id === body.instructorId);
       if (service.certificatesOnly || !instructor || !dates.some(d => d.toISOString().slice(0, 10) === body.date)) throw new InvalidRecord('La jornada ya no está disponible. Actualiza el registro.');
