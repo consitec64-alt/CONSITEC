@@ -1,4 +1,5 @@
 "use client";
+import { draftSessions, type DraftValues } from "@/lib/service-draft";
 import TimePicker from "@/components/time-picker";
 import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
@@ -7,16 +8,16 @@ import { classHours, durationLabel } from '@/lib/class-hours';
 import CatalogPicker from '@/components/catalog-picker';
 import { Meta, Service, serviceDays, serviceInstructors } from '@/lib/ui-types';
 
-export default function ServiceFields({ service, defaultDate, initialDates, fixedModality, previewMixed = false, instructors, includeCorrelative = true, includeInvoiceDate = true }: { service: Service | null; defaultDate: string; initialDates?: string[]; fixedModality?: string | null; previewMixed?: boolean; instructors: Meta[]; includeCorrelative?: boolean; includeInvoiceDate?: boolean }) {
-  const [modality, setModality] = useState(fixedModality || service?.modality || '');
+export default function ServiceFields({ draft, service, defaultDate, initialDates, fixedModality, previewMixed = false, instructors, includeCorrelative = true, includeInvoiceDate = true }: { draft?: DraftValues | null; service: Service | null; defaultDate: string; initialDates?: string[]; fixedModality?: string | null; previewMixed?: boolean; instructors: Meta[]; includeCorrelative?: boolean; includeInvoiceDate?: boolean }) {
+  const [modality, setModality] = useState(fixedModality || service?.modality || (typeof draft?.modality==='string'?draft.modality:''));
   const displayedModality = previewMixed ? 'MIXED' : modality;
-  const [sessions, setSessions] = useState(() => (service ? serviceDays(service) : initialDates?.length ? initialDates : [defaultDate]).map(date => {
+  const [sessions, setSessions] = useState(() => draftSessions(draft?.sessions) ?? (service ? serviceDays(service) : initialDates?.length ? initialDates : [defaultDate]).map(date => {
     const saved = service?.dates?.find(d => d.date.slice(0, 10) === date);
     return { date, startTime: saved?.startTime || '', endTime: saved?.endTime || '', modality: dayModality(fixedModality || service?.modality, saved?.modality) || '' };
   }));
   const dates = sessions.map(session => session.date);
   const changeSession = (index: number, field: 'date' | 'startTime' | 'endTime' | 'modality', value: string) => setSessions(previous => previous.map((s, i) => i === index ? { ...s, [field]: value } : s));
-  const [instructorIds,setInstructorIds]=useState(()=>service?serviceInstructors(service).map(i=>i.id):[]);
+  const [instructorIds,setInstructorIds]=useState(()=>service?serviceInstructors(service).map(i=>i.id):Array.isArray(draft?.instructorIds)?draft.instructorIds:[]);
   const [conflicts, setConflicts] = useState<Record<string, string[]>>({});
   const [availabilityError, setAvailabilityError] = useState('');
   const [checking, setChecking] = useState(false);
@@ -46,7 +47,7 @@ export default function ServiceFields({ service, defaultDate, initialDates, fixe
     })}<p className="form-note">Total de horas de clase: {durationLabel(sessions.reduce((total, session) => total + (classHours(session.startTime, session.endTime)?.instructionalMinutes ?? 0), 0))}. El descanso se descuenta por fecha.</p><button type="button" className="btn secondary" disabled={sessions.length >= 366} onClick={() => setSessions(previous => [...previous, { date: '', startTime: '', endTime: '', modality: displayedModality === 'MIXED' ? '' : modality }])}><Plus size={16} />Agregar fecha</button></fieldset>
     <CatalogPicker title="Instructores del servicio" name="instructorIds" items={instructors} selected={instructorIds} onChange={setInstructorIds} unavailable={conflicts} checking={checking} className="instructor-picker" description={checking?'Comprobando disponibilidad…':'Selecciona uno o varios instructores para todas las fechas. Puedes dejarlo sin asignar.'}/>
     {includeInvoiceDate && <label>Fecha de facturación <small>(opcional)</small><input name="invoiceDate" type="date" defaultValue={service?.invoicedAt?.slice(0,10) || ""} /><small>Al marcar Facturado se usará hoy si está vacía. El importe sumará en ese mes.</small></label>}
-    <label>Viáticos <small>(opcional)</small><select name="travelMode" defaultValue={service?.travelMode || 'NONE'}><option value="NONE">No aplica</option><option value="PLANE">Avión</option><option value="BUS">Bus</option></select></label>
+    <label>Viáticos <small>(opcional)</small><select name="travelMode" defaultValue={service?.travelMode || (typeof draft?.travelMode==='string'?draft.travelMode:'NONE')}><option value="NONE">No aplica</option><option value="PLANE">Avión</option><option value="BUS">Bus</option></select></label>
     {instructorIds.filter(id=>conflicts[id]?.length).map(id=><p key={id} className="error-banner full-width" role="alert">{instructors.find(i=>i.id===id)?.name} no está disponible para: {conflicts[id].join(', ')}. Quita ese instructor o cambia las fechas.</p>)}
     {availabilityError && <p className="error-banner full-width" role="alert">{availabilityError}. La disponibilidad se volverá a validar al guardar.</p>}
   </>;
