@@ -43,7 +43,7 @@ export async function restoreRecord(entity: string, id: string, actor: Actor) {
       if(before.certificateSaleId)throw new InvalidRecord('Recupera primero la venta de certificados vinculada');
       await assertMonthsOpen(tx,before);
       const instructorIds = [...new Set([before.instructorId,...before.instructors.map(i=>i.id)].filter((id):id is string=>!!id))];
-      await assertInstructorsAvailable(tx, instructorIds, before.dates.length ? before.dates.map(d=>d.date) : before.serviceDate ? [before.serviceDate] : [], id);
+      await assertInstructorsAvailable(tx, instructorIds, before.dates.length ? before.dates : before.serviceDate ? [{date:before.serviceDate}] : [], id);
       const after = await tx.service.update({ where: { id }, data: { deletedAt: null }, include: serviceInclude });
       await audit(tx, actor, entity, 'RESTORE', before, after); return after;
     }

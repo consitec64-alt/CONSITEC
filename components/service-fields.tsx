@@ -15,17 +15,17 @@ export default function ServiceFields({ draft, service, defaultDate, initialDate
     const saved = service?.dates?.find(d => d.date.slice(0, 10) === date);
     return { date, startTime: saved?.startTime || '', endTime: saved?.endTime || '', modality: dayModality(fixedModality || service?.modality, saved?.modality) || '' };
   }));
-  const dates = sessions.map(session => session.date);
   const changeSession = (index: number, field: 'date' | 'startTime' | 'endTime' | 'modality', value: string) => setSessions(previous => previous.map((s, i) => i === index ? { ...s, [field]: value } : s));
   const [instructorIds,setInstructorIds]=useState(()=>service?serviceInstructors(service).map(i=>i.id):Array.isArray(draft?.instructorIds)?draft.instructorIds:[]);
   const [conflicts, setConflicts] = useState<Record<string, string[]>>({});
   const [availabilityError, setAvailabilityError] = useState('');
   const [checking, setChecking] = useState(false);
-  const key = dates.filter(Boolean).join(',');
+  const key = JSON.stringify(sessions.filter(s => s.date).map(({date, startTime, endTime}) => ({date, startTime, endTime})));
   useEffect(() => {
-    if (!key) { setConflicts({}); return; }
+    const requested = JSON.parse(key) as {date:string;startTime:string;endTime:string}[];
+    if (!requested.length || requested.some(s => (s.startTime || s.endTime) && !classHours(s.startTime, s.endTime))) { setConflicts({}); setChecking(false); setAvailabilityError(''); return; }
     const controller = new AbortController();
-    const query = new URLSearchParams();key.split(',').forEach(d => query.append('date', d));
+    const query = new URLSearchParams();requested.forEach(s => { query.append('date', s.date); query.append('startTime', s.startTime); query.append('endTime', s.endTime); });
     if (service) query.set('excludeServiceId', service.id);
     setChecking(true);setAvailabilityError('');
     void fetch(`/api/instructors/availability?${query}`, { signal: controller.signal }).then(async response => {
@@ -48,7 +48,7 @@ export default function ServiceFields({ draft, service, defaultDate, initialDate
     <CatalogPicker title="Instructores del servicio" name="instructorIds" items={instructors} selected={instructorIds} onChange={setInstructorIds} unavailable={conflicts} checking={checking} className="instructor-picker" description={checking?'Comprobando disponibilidad…':'Selecciona uno o varios instructores para todas las fechas. '}/>
     {includeInvoiceDate && <label>Fecha de facturación <input name="invoiceDate" type="date" defaultValue={service?.invoicedAt?.slice(0,10) || ""} /><small>Al marcar Facturado se usará hoy si está vacía. El importe sumará en ese mes.</small></label>}
     <label>Viáticos <select name="travelMode" defaultValue={service?.travelMode || (typeof draft?.travelMode==='string'?draft.travelMode:'NONE')}><option value="NONE">No aplica</option><option value="PLANE">Avión</option><option value="BUS">Bus</option></select></label>
-    {instructorIds.filter(id=>conflicts[id]?.length).map(id=><p key={id} className="error-banner full-width" role="alert">{instructors.find(i=>i.id===id)?.name} no está disponible para: {conflicts[id].join(', ')}. Quita ese instructor o cambia las fechas.</p>)}
+    {instructorIds.filter(id=>conflicts[id]?.length).map(id=><p key={id} className="error-banner full-width" role="alert">{instructors.find(i=>i.id===id)?.name} no está disponible para: {conflicts[id].join(', ')}. Quita ese instructor o cambia las fechas u horas.</p>)}
     {availabilityError && <p className="error-banner full-width" role="alert">{availabilityError}. La disponibilidad se volverá a validar al guardar.</p>}
   </>;
 }

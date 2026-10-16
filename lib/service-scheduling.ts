@@ -1,3 +1,4 @@
+import { bookedSessions, conflictingDays, type InstructorSession } from '@/lib/instructor-availability';
 import { scheduledServiceStatus } from "@/lib/service-status";
 import { quotationOwner, lockQuotation, QuotationError } from "@/lib/quotations";
 import { assertMonthsOpen } from '@/lib/monthly-close';
@@ -22,22 +23,22 @@ export function datesWhere(days: Date[]): Prisma.ServiceWhereInput {
   }) };
 }
 export class InstructorUnavailable extends Error {}
-export async function assertInstructorsAvailable(tx: Prisma.TransactionClient, instructorIds: string[], dates: Date[], exclude?: string) {
-  if (!dates.length) return;
+export async function assertInstructorsAvailable(tx: Prisma.TransactionClient, instructorIds: string[], sessions: InstructorSession[], exclude?: string) {
+  if (!sessions.length) return;
+  const dates = sessions.map(s => s.date);
   // Lock in a consistent order to prevent deadlocks for overlapping teams.
   for (const instructorId of [...instructorIds].sort()) {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${instructorId}))::text`;
   }
   for (const instructorId of instructorIds) {
-    const conflict = await tx.service.findFirst({
+    const bookings = await tx.service.findMany({
       where: { AND: [datesWhere(dates), { OR: [{instructorId}, {instructors:{some:{id:instructorId}}}] }], ...(exclude ? {id:{not:exclude}} : {}) },
       include: {dates:true}
     });
-    if (conflict) {
+    const occupied = conflictingDays(sessions, bookings.flatMap(bookedSessions));
+    if (occupied.length) {
       const instructor = await tx.instructor.findUnique({where:{id:instructorId}});
-      const booked = new Set([conflict.serviceDate,...conflict.dates.map(d=>d.date)].filter((d): d is Date => !!d).map(d=>d.toISOString().slice(0,10)));
-      const occupied = dates.filter(d=>booked.has(d.toISOString().slice(0,10))).filter((d): d is Date => !!d).map(d=>d.toISOString().slice(0,10)).join(', ');
-      throw new InstructorUnavailable(`${instructor?.name || 'El instructor'} no está disponible para la fecha: ${occupied}`);
+      throw new InstructorUnavailable(`${instructor?.name || 'El instructor'} no está disponible en el horario solicitado para: ${occupied.join(', ')}`);
     }
   }
 }
@@ -61,7 +62,7 @@ export async function writeService(body: Record<string, unknown>, id?: string, u
     const invoicedAt = invoiceDateFor(data.status, requestedInvoiceDate, existing);
     await assertMonthsOpen(tx, existing, { ...data, dates: sessions, invoicedAt });
     if (await tx.instructor.count({where:{id:{in:instructorIds}}}) !== instructorIds.length) throw new InvalidRecord('Uno de los instructores seleccionados ya no existe');
-    await assertInstructorsAvailable(tx, instructorIds, dates, id);
+    await assertInstructorsAvailable(tx, instructorIds, sessions, id);
     if (duplicates.length && body.allowDuplicate !== true) throw new PossibleDuplicate(duplicates);
     const saved = id ? await tx.service.update({ where: { id }, data: { ...data, salespersonId, invoicedAt, instructors: {set:instructorIds.map(id=>({id}))}, courses: { set: courseIds.map(id => ({ id })) }, dates: { deleteMany: {}, create: sessions } }, include: serviceInclude })
     : await tx.service.create({ data: { ...data, salespersonId, invoicedAt, instructors: {connect:instructorIds.map(id=>({id}))}, courses: { connect: courseIds.map(id => ({ id })) }, dates: { create: sessions } }, include: serviceInclude });
