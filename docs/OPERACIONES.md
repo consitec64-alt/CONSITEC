@@ -109,6 +109,9 @@ marca **no disponible** a quienes tienen un servicio con horario superpuesto.
 Por ejemplo, 09:00–12:00 permite otro servicio desde las 12:00; 11:00–13:00
 genera un conflicto. Editar el propio servicio no genera conflicto consigo mismo.
 El aviso se actualiza al cambiar una fecha o cualquiera de las horas.
+«No disponible» muestra la fecha y el horario de la reserva que genera el
+conflicto (por ejemplo, `2026-10-01 · 09:00–12:00`). Las reservas sin horas
+indican «Todo el día (sin horario)».
 
 La API vuelve a comprobar disponibilidad al crear, editar, convertir una cotización
 y restaurar desde Papelera. Las reservas del mismo instructor se serializan en

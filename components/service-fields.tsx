@@ -31,7 +31,7 @@ export default function ServiceFields({ draft, service, defaultDate, initialDate
     void fetch(`/api/instructors/availability?${query}`, { signal: controller.signal }).then(async response => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'No se pudo comprobar disponibilidad');
-      setConflicts(data.conflicts);
+      setConflicts(data.conflictDetails ?? data.conflicts);
     }).catch(error => { if (!controller.signal.aborted) { setConflicts({});setAvailabilityError(error instanceof Error ? error.message : 'No se pudo comprobar disponibilidad'); } })
       .finally(() => { if (!controller.signal.aborted) setChecking(false); });
     return () => controller.abort();
