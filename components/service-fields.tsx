@@ -1,7 +1,8 @@
 "use client";
 import { draftSessions, type DraftSession, type DraftValues } from "@/lib/service-draft";
 import TimePicker from "@/components/time-picker";
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useInstructorAvailability } from '@/components/use-instructor-availability';
 import { Plus, Trash2 } from 'lucide-react';
 import { dayModality } from '@/lib/class-modality';
 import { classHours, durationLabel } from '@/lib/class-hours';
@@ -22,26 +23,8 @@ export default function ServiceFields({ draft, service, defaultDate, initialDate
   const selectedInstructors = instructors.filter(instructor=>instructorIds.includes(instructor.id));
   const sessions = sessionDrafts.map(session=>({...session,courseIds:(session.courseIds??[]).filter(id=>courseIds.includes(id)),instructorIds:(session.instructorIds??[]).filter(id=>instructorIds.includes(id))}));
   const assign = (index:number,key:'courseIds'|'instructorIds',values:string[]) => setSessions(previous=>previous.map((session,i)=>i===index?{...session,[key]:values}:session));
-  const [conflicts, setConflicts] = useState<Record<string, string[]>>({});
-  const [availabilityError, setAvailabilityError] = useState('');
-  const [checking, setChecking] = useState(false);
+  const { conflicts, checking, error: availabilityError } = useInstructorAvailability(sessions, service?.id);
   const relevantConflicts = Object.fromEntries(Object.entries(conflicts).map(([id,days])=>[id,instructorIds.includes(id)?days.filter(date=>sessions.some(session=>session.date===date&&(!session.instructorIds.length||session.instructorIds.includes(id)))):days]));
-  const key = JSON.stringify(sessions.filter(s => s.date).map(({date, startTime, endTime}) => ({date, startTime, endTime})));
-  useEffect(() => {
-    const requested = JSON.parse(key) as {date:string;startTime:string;endTime:string}[];
-    if (!requested.length || requested.some(s => (s.startTime || s.endTime) && !classHours(s.startTime, s.endTime))) { setConflicts({}); setChecking(false); setAvailabilityError(''); return; }
-    const controller = new AbortController();
-    const query = new URLSearchParams();requested.forEach(s => { query.append('date', s.date); query.append('startTime', s.startTime); query.append('endTime', s.endTime); });
-    if (service) query.set('excludeServiceId', service.id);
-    setChecking(true);setAvailabilityError('');
-    void fetch(`/api/instructors/availability?${query}`, { signal: controller.signal }).then(async response => {
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'No se pudo comprobar disponibilidad');
-      setConflicts(data.conflicts);
-    }).catch(error => { if (!controller.signal.aborted) { setConflicts({});setAvailabilityError(error instanceof Error ? error.message : 'No se pudo comprobar disponibilidad'); } })
-      .finally(() => { if (!controller.signal.aborted) setChecking(false); });
-    return () => controller.abort();
-  }, [key, service]);
   return <>
     {includeCorrelative && <label className="full-width">Código de correlativo <input name="correlativeCode" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} defaultValue={service?.correlativeCode || ''} placeholder="Ej. 0042" title="Si se ingresa, exactamente 4 dígitos numéricos" /></label>}
     <input type="hidden" name="sessions" value={JSON.stringify(sessions)} />
