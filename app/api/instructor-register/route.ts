@@ -1,11 +1,11 @@
+import { assignedItems } from '@/lib/date-assignments';
+import { instructorRegisterRows } from '@/lib/instructor-register';
 import { executePastServices } from "@/lib/service-status";
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { agendaWhere, serviceInclude } from "@/lib/service-scheduling";
 import { invoiceDate, InvalidRecord } from "@/lib/record-input";
-import { dayModality, modalityLabel } from "@/lib/class-modality";
-import { classHours } from "@/lib/class-hours";
 import { recordError } from "@/lib/record-error";
 import { currentUser } from "@/lib/current-user";
 import { audit } from "@/lib/audit";
@@ -31,17 +31,7 @@ export async function GET(req: Request) {
         ...(instructorId ? { OR:[{instructorId},{instructors:{some:{id:instructorId}}}] } : {}), ...(company ? { company: { contains: company, mode: 'insensitive' } } : {}), ...(modality ? { modality: { in: modality === 'MIXED' ? ['MIXED'] : [modality as 'VIRTUAL' | 'IN_PERSON', 'MIXED'] } } : {}) },
       include: { ...serviceInclude, registerConfirmations: { select: { date: true, instructorId: true, confirmed: true } } }, orderBy: [{ serviceDate: 'asc' }, { id: 'asc' }]
     });
-    const confirmedIds = new Set(services.flatMap(s => s.registerConfirmations.filter(c => c.confirmed).map(c => `${s.id}:${c.date}:${c.instructorId}`)));
-    const rows = services.flatMap(s => (s.dates.length ? s.dates : s.serviceDate ? [{ date: s.serviceDate, startTime: null, endTime: null, modality: null }] : []).filter(d => d.date >= start && d.date < end && (!modality || modality === 'MIXED' || dayModality(s.modality, d.modality) === modality)).flatMap(d => (s.instructors.length ? s.instructors : s.instructor ? [s.instructor] : [{id:"unassigned",name:"Sin asignar"}]).filter(i=>!instructorId||i.id===instructorId).map(instructor => ({
-      id: `${s.id}:${d.date.toISOString().slice(0, 10)}:${instructor.id}`, date: d.date.toISOString().slice(0, 10),
-      serviceId: s.id, instructorId: instructor.id,
-      confirmed: confirmedIds.has(`${s.id}:${d.date.toISOString().slice(0, 10)}:${instructor.id}`),
-      instructor: instructor.name, company: s.company,
-      courses: (s.courses.length ? s.courses : [s.course]).map(c => c.name),
-      modality: modalityLabel(dayModality(s.modality, d.modality)),
-      location: dayModality(s.modality, d.modality) === 'VIRTUAL' ? 'Virtual' : s.location ? `${s.location.department} / ${s.location.district}` : 'Sin registrar',
-      instructionalMinutes: d.startTime && d.endTime ? classHours(d.startTime, d.endTime)?.instructionalMinutes ?? null : null
-    })))).sort((a, b) => a.date.localeCompare(b.date) || a.instructor.localeCompare(b.instructor, 'es') || a.company.localeCompare(b.company, 'es') || a.id.localeCompare(b.id));
+    const rows = instructorRegisterRows(services, { start, end, modality, courseId, instructorId });
     return NextResponse.json({ rows, canConfirm: true, canManageConfirmations: actor.role === 'ADMIN' || actor.role === 'SUPERVISOR' }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) { return recordError(error); }
 }
@@ -60,7 +50,8 @@ export async function PATCH(req: Request) {
       const service = await tx.service.findUniqueOrThrow({ where: { id: body.serviceId, deletedAt: null }, include: serviceInclude });
       const dates = service.dates.length ? service.dates.map(d => d.date) : service.serviceDate ? [service.serviceDate] : [];
       const instructors = service.instructors.length ? service.instructors : service.instructor ? [service.instructor] : [{ id: 'unassigned', name: 'Sin asignar' }];
-      const instructor = instructors.find(i => i.id === body.instructorId);
+      const day = service.dates.find(d=>d.date.toISOString().slice(0,10) === body.date);
+      const instructor = assignedItems(instructors, day?.instructorIds).find(i => i.id === body.instructorId);
       if (service.certificatesOnly || !instructor || !dates.some(d => d.toISOString().slice(0, 10) === body.date)) throw new InvalidRecord('La jornada ya no está disponible. Actualiza el registro.');
       const key = { serviceId: service.id, date: body.date as string, instructorId: instructor.id };
       const before = await tx.instructorConfirmation.findUnique({ where: { serviceId_date_instructorId: key } });

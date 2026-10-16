@@ -1,10 +1,15 @@
 export type DraftValues = Record<string, string | string[]>;
 export type ServiceDraft = { values: DraftValues; updatedAt: string };
-export type DraftSession = { date: string; startTime: string; endTime: string; modality: string };
+export type DraftSession = { date: string; startTime: string; endTime: string; modality: string; courseIds?: string[]; instructorIds?: string[] };
 const fields = ['company','salespersonId','correlativeCode','courseIds','instructorIds','sessions','modality','locationId','invoiceDate','travelMode','amount','status','certificatesOnly'];
 export function draftSessions(value: unknown): DraftSession[] | null {
   if (typeof value !== 'string') return null;
-  try { const rows = JSON.parse(value); if (!Array.isArray(rows) || rows.length < 1 || rows.length > 366 || rows.some(row => !row || ['date','startTime','endTime','modality'].some(key => typeof row[key] !== 'string' || row[key].length > 40))) return null; return rows.map(row => ({date:row.date,startTime:row.startTime,endTime:row.endTime,modality:row.modality})); } catch { return null; }
+  try {
+    const rows = JSON.parse(value);
+    const validIds = (ids: unknown) => ids === undefined || (Array.isArray(ids) && ids.length <= 100 && ids.every(id => typeof id === 'string' && id.length > 0 && id.length <= 100));
+    if (!Array.isArray(rows) || rows.length < 1 || rows.length > 366 || rows.some(row => !row || ['date','startTime','endTime','modality'].some(key => typeof row[key] !== 'string' || row[key].length > 40) || !validIds(row.courseIds) || !validIds(row.instructorIds))) return null;
+    return rows.map(row => ({date:row.date,startTime:row.startTime,endTime:row.endTime,modality:row.modality,...(row.courseIds ? {courseIds:[...new Set(row.courseIds)] as string[]} : {}),...(row.instructorIds ? {instructorIds:[...new Set(row.instructorIds)] as string[]} : {})}));
+  } catch { return null; }
 }
 export function validateDraft(value: unknown): DraftValues {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('Borrador inválido');

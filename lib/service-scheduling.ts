@@ -1,3 +1,4 @@
+import { assignedInstructorSessions, assignedItems, assignmentKey } from '@/lib/date-assignments';
 import { bookedSessions, conflictingDays, type InstructorSession } from '@/lib/instructor-availability';
 import { scheduledServiceStatus } from "@/lib/service-status";
 import { quotationOwner, lockQuotation, QuotationError } from "@/lib/quotations";
@@ -25,17 +26,18 @@ export function datesWhere(days: Date[]): Prisma.ServiceWhereInput {
 export class InstructorUnavailable extends Error {}
 export async function assertInstructorsAvailable(tx: Prisma.TransactionClient, instructorIds: string[], sessions: InstructorSession[], exclude?: string) {
   if (!sessions.length) return;
-  const dates = sessions.map(s => s.date);
   // Lock in a consistent order to prevent deadlocks for overlapping teams.
   for (const instructorId of [...instructorIds].sort()) {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${instructorId}))::text`;
   }
   for (const instructorId of instructorIds) {
+    const requested = assignedInstructorSessions(sessions, instructorId);
+    if (!requested.length) continue;
     const bookings = await tx.service.findMany({
-      where: { AND: [datesWhere(dates), { OR: [{instructorId}, {instructors:{some:{id:instructorId}}}] }], ...(exclude ? {id:{not:exclude}} : {}) },
+      where: { AND: [datesWhere(requested.map(session => session.date)), { OR: [{instructorId}, {instructors:{some:{id:instructorId}}}] }], ...(exclude ? {id:{not:exclude}} : {}) },
       include: {dates:true}
     });
-    const occupied = conflictingDays(sessions, bookings.flatMap(bookedSessions));
+    const occupied = conflictingDays(requested, bookings.flatMap(booking => assignedInstructorSessions(bookedSessions(booking), instructorId)));
     if (occupied.length) {
       const instructor = await tx.instructor.findUnique({where:{id:instructorId}});
       throw new InstructorUnavailable(`${instructor?.name || 'El instructor'} no está disponible en el horario solicitado para: ${occupied.join(', ')}`);
@@ -58,7 +60,7 @@ export async function writeService(body: Record<string, unknown>, id?: string, u
     if (await tx.course.count({ where: { id: { in: courseIds } } }) !== courseIds.length) throw new InvalidRecord("Uno de los cursos seleccionados ya no existe");
     if(existing?.certificateSaleId)throw new InvalidRecord('Edita la venta vinculada desde Venta de certificados');
     const salespersonId = quotation?.salespersonId ?? await recordSalesperson(tx, actor, body.salespersonId, existing?.salespersonId);
-    const duplicates = await serviceDuplicates(tx, data.company, courseIds, dates, id);
+    const duplicates = await serviceDuplicates(tx, data.company, courseIds, dates, id, sessions);
     const invoicedAt = invoiceDateFor(data.status, requestedInvoiceDate, existing);
     await assertMonthsOpen(tx, existing, { ...data, dates: sessions, invoicedAt });
     if (await tx.instructor.count({where:{id:{in:instructorIds}}}) !== instructorIds.length) throw new InvalidRecord('Uno de los instructores seleccionados ya no existe');
@@ -66,6 +68,16 @@ export async function writeService(body: Record<string, unknown>, id?: string, u
     if (duplicates.length && body.allowDuplicate !== true) throw new PossibleDuplicate(duplicates);
     const saved = id ? await tx.service.update({ where: { id }, data: { ...data, salespersonId, invoicedAt, instructors: {set:instructorIds.map(id=>({id}))}, courses: { set: courseIds.map(id => ({ id })) }, dates: { deleteMany: {}, create: sessions } }, include: serviceInclude })
     : await tx.service.create({ data: { ...data, salespersonId, invoicedAt, instructors: {connect:instructorIds.map(id=>({id}))}, courses: { connect: courseIds.map(id => ({ id })) }, dates: { create: sessions } }, include: serviceInclude });
+    if (existing) {
+      const oldDays = existing.dates.length ? existing.dates : existing.serviceDate ? [{date:existing.serviceDate,courseIds:[],instructorIds:[]}] : [];
+      const oldCourses = (existing.courses.length ? existing.courses : [existing.course]);
+      const oldInstructors = existing.instructors.length ? existing.instructors : existing.instructor ? [existing.instructor] : [];
+      const changed = oldDays.filter(day => {
+        const next = sessions.find(row => row.date.toISOString().slice(0,10) === day.date.toISOString().slice(0,10));
+        return !next || assignmentKey(assignedItems(oldCourses,day.courseIds).map(c=>c.id)) !== assignmentKey(next.courseIds.length?next.courseIds:courseIds) || assignmentKey(assignedItems(oldInstructors,day.instructorIds).map(i=>i.id)) !== assignmentKey(next.instructorIds.length?next.instructorIds:instructorIds);
+      }).map(day=>day.date.toISOString().slice(0,10));
+      if (changed.length) await tx.instructorConfirmation.deleteMany({where:{serviceId:existing.id,date:{in:changed}}});
+    }
     await audit(tx, actor, "SERVICE", id ? "UPDATE" : "CREATE", existing, saved);
     if (quotation) {
       const after = await tx.quotation.update({where:{id:quotation.id},data:{serviceId:saved.id,convertedAt:new Date()},include:{courses:true,salesperson:true}});
