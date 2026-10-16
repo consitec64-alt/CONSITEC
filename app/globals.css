@@ -457,3 +457,25 @@ html[data-text-size]:not([data-text-size=normal]) small{font-size:calc(11px * va
 .location-picker .catalog-search svg { flex-shrink:0; }
 .location-picker select { width:100%; }
 @media(max-width:760px){.service-draft-banner{flex-direction:column;align-items:stretch}.service-draft-banner .btn{justify-content:center}}
+
+/* Original service/certificate forms with a live, read-only record summary. */
+.dialog.record-dialog{width:min(1080px,calc(100vw - 40px));height:min(900px,92dvh);max-height:92dvh;padding:0;display:flex;flex-direction:column;overflow:hidden}
+.record-dialog>.section-heading{padding:22px 26px 12px;margin:0;flex-shrink:0}
+.record-dialog>.dialog-intro{padding:0 26px 18px;margin:0;color:var(--muted);font-size:12px;flex-shrink:0;border-bottom:1px solid var(--border)}
+.record-dialog>form,.record-editor{display:flex;flex-direction:column;flex:1;min-height:0;margin:0}
+.record-editor-content{display:grid;grid-template-columns:minmax(0,1fr) 280px;flex:1;min-height:0;overflow:auto;scrollbar-width:thin}
+.record-editor-fields{min-width:0;padding:0 24px 24px}
+.record-editor-fields>.record-section{margin:20px 0;padding:18px}
+.record-editor-fields>.assigned-commercial{margin:16px 0}
+.record-editor-summary{background:var(--soft);border-left:1px solid var(--border);padding:24px 20px;min-width:0}
+.record-summary{position:sticky;top:20px;max-height:calc(92dvh - 200px);overflow:auto;scrollbar-width:thin}
+.record-summary>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:700;color:var(--muted);cursor:pointer;padding:0 0 16px}
+.record-summary>summary::-webkit-details-marker{display:none}.record-summary>summary svg{transition:transform .18s}.record-summary:not([open])>summary svg{transform:rotate(-90deg)}
+.record-summary-content{padding-bottom:2px}.record-summary-item{display:flex;align-items:flex-start;gap:10px;line-height:1.7;font-size:12px;margin:0 0 17px;overflow-wrap:anywhere}.record-summary-item>svg{flex-shrink:0;color:var(--blue);margin-top:2px}.record-summary-item strong{font-size:14px;font-weight:650}.record-summary-item small{display:block;font-size:10px;color:var(--muted);margin-top:4px;line-height:1.6}
+.record-summary-facts{padding:15px 0;border-top:1px solid var(--border);margin:0 0 16px}.record-summary-facts>div{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;font-size:11px;margin-bottom:12px}.record-summary-facts>div:last-child{margin-bottom:0}.record-summary-facts span{color:var(--muted)}.record-summary-facts strong{text-align:right;font-weight:500;overflow-wrap:anywhere;max-width:68%}
+.record-summary-caption{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 16px}.record-summary-empty{font-size:11px;color:var(--muted);margin-bottom:16px}
+.record-summary-total{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:17px}.record-summary-total>span{font-size:11px;color:var(--muted)}.record-summary-total>strong{display:block;font-size:26px;letter-spacing:-.6px;margin-top:7px;overflow-wrap:anywhere}.record-summary-total>small{display:block;color:var(--muted);font-size:10px;margin-top:9px;line-height:1.6}
+.record-editor-footer{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:16px 24px;box-shadow:0 -4px 15px #152c5905;z-index:2}.record-dialog .record-editor-footer>.dialog-actions{position:static;padding:0;margin:0;border:0;background:transparent;flex-wrap:wrap}
+.record-editor-content:has(.record-editor-fields>.error-banner){scroll-padding-bottom:20px}
+@media(max-width:900px){.record-editor-content{grid-template-columns:minmax(0,1fr) 245px}.record-editor-fields{padding:0 18px 20px}.record-editor-summary{padding:22px 16px}.record-editor-fields>.record-section{padding:15px}}
+@media(max-width:760px){.dialog.record-dialog{width:100%;height:100dvh;max-height:100dvh;border-radius:0}.modal-overlay:has(>.record-dialog){padding:0}.record-dialog>.section-heading{padding:18px 20px 10px}.record-dialog>.dialog-intro{padding:0 20px 15px}.record-editor-content{display:block}.record-editor-fields{padding:0 16px 20px}.record-editor-summary{border-left:0;border-top:1px solid var(--border);padding:20px}.record-summary{position:static;max-height:none}.record-summary-total>strong{font-size:24px}.record-editor-footer{padding:13px 16px;padding-bottom:max(13px,env(safe-area-inset-bottom))}.record-editor-footer .btn{padding:11px 12px}.record-summary-facts strong{max-width:70%}}
