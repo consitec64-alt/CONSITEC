@@ -1,3 +1,4 @@
+import { assignedInstructorSessions } from '@/lib/date-assignments';
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -21,13 +22,14 @@ export async function GET(req: Request) {
     const excluded = query.get("excludeServiceId");
     const booked = await prisma.service.findMany({
       where: { ...datesWhere(dates), ...(excluded ? { id: { not: excluded } } : {}) },
-      select: { instructorId: true, instructors:{select:{id:true}}, serviceDate: true, dates: { select: { date: true, startTime: true, endTime: true } } }
+      select: { instructorId: true, instructors:{select:{id:true}}, serviceDate: true, dates: { select: { date: true, startTime: true, endTime: true, instructorIds: true } } }
     });
     const conflicts: Record<string, string[]> = {};
     for (const s of booked) {
-      const days = conflictingDays(sessions, bookedSessions(s));
-      if (!days.length) continue;
-      for (const id of new Set([s.instructorId,...s.instructors.map(i=>i.id)].filter((id):id is string=>!!id))) conflicts[id] = [...new Set([...(conflicts[id] ?? []), ...days])].sort();
+      for (const id of new Set([s.instructorId,...s.instructors.map(i=>i.id)].filter((id):id is string=>!!id))) {
+        const days = conflictingDays(sessions, assignedInstructorSessions(bookedSessions(s), id));
+        if (days.length) conflicts[id] = [...new Set([...(conflicts[id] ?? []), ...days])].sort();
+      }
     }
     return NextResponse.json({ conflicts });
   } catch (error) { return recordError(error); }

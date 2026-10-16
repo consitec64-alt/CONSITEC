@@ -1,6 +1,6 @@
 import { classHours } from './class-hours';
 
-export type InstructorSession = { date: Date; startTime?: string | null; endTime?: string | null };
+export type InstructorSession = { date: Date; instructorIds?: string[]; startTime?: string | null; endTime?: string | null };
 const dayKey = (date: Date) => date.toISOString().slice(0, 10);
 
 // Unknown hours reserve the entire day. Adjacent intervals do not overlap.

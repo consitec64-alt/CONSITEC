@@ -185,6 +185,8 @@ model CertificateSale {
 }
 
 model ServiceDay {
+  courseIds String[] @default([])
+  instructorIds String[] @default([])
   modality  ClassModality?
   id        String @id @default(cuid())
   date      DateTime

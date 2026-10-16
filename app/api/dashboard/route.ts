@@ -1,3 +1,4 @@
+import { assignedItems } from '@/lib/date-assignments';
 import { countsForCertificateRevenue } from '@/lib/certificate-status';
 import { executePastServices } from "@/lib/service-status";
 export const dynamic = "force-dynamic";
@@ -79,11 +80,12 @@ export async function GET(req: Request) {
       bySalesperson[rep] = (bySalesperson[rep] ?? 0) + 1;
       byWeek[weekLabel] = (byWeek[weekLabel] ?? 0) + 1;
 
-      for (const course of s.courses.length ? s.courses : [s.course]) {
+      const day = s.dates.find(day=>day.date.toISOString().slice(0,10)===activityDate.toISOString().slice(0,10));
+      for (const course of assignedItems(s.courses.length ? s.courses : [s.course],day?.courseIds)) {
         byCourse[course.name] = (byCourse[course.name] ?? 0) + 1;
       }
 
-      for (const instructor of s.instructors.length ? s.instructors : s.instructor ? [s.instructor] : []) {
+      for (const instructor of assignedItems(s.instructors.length ? s.instructors : s.instructor ? [s.instructor] : [],day?.instructorIds)) {
         byInstructor[instructor.name] = (byInstructor[instructor.name] ?? 0) + 1;
       }
 
