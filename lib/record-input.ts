@@ -1,3 +1,4 @@
+import { certificateStatusOptions, PAYMENT_WITHOUT_INVOICE } from '@/lib/certificate-status';
 import { Prisma, CustomerType, ServiceStatus, TravelMode, ClassModality, CertificateKind } from "@prisma/client";
 
 import { isDayModality } from "@/lib/class-modality";
@@ -39,7 +40,7 @@ export function saleInput(body: Record<string, unknown>) {
   if (certificateKind === 'INSPECTION' && customerType !== 'COMPANY') throw new InvalidRecord('Los certificados de inspección corresponden siempre a una empresa');
   const correlativeCode = customerType === 'COMPANY' && body.correlativeCode != null && body.correlativeCode !== '' ? body.correlativeCode : null;
   if (correlativeCode !== null && (typeof correlativeCode !== 'string' || !/^[0-9]{4}$/.test(correlativeCode))) throw new InvalidRecord('El correlativo de empresa debe tener exactamente 4 dígitos numéricos');
-  const allowed = customerType === "COMPANY" ? ["SCHEDULED","INVOICED"] : ["SCHEDULED","PAID"];
+  const allowed = Object.keys(certificateStatusOptions(String(customerType)));
   const status = body.status || "SCHEDULED";
   if (!allowed.includes(String(status))) throw new InvalidRecord("Estado no válido para este tipo de cliente");
   const courseIds = selectedIds(body.courseIds === undefined ? [body.courseId] : body.courseIds, 'Cursos');
@@ -56,6 +57,7 @@ export function serviceDates(values: unknown): Date[] {
 }
 export function serviceInput(body: Record<string, unknown>) {
   if (!body || typeof body !== "object") throw new InvalidRecord("Solicitud inválida");
+  if (body.status === PAYMENT_WITHOUT_INVOICE) throw new InvalidRecord("Pago sin factura solo se usa para ventas de certificados");
   if (body.status === "PAID") throw new InvalidRecord("Pagado solo se usa para certificados de personas naturales");
   if (body.certificatesOnly !== undefined && typeof body.certificatesOnly !== "boolean") throw new InvalidRecord("Selecciona el tipo de servicio");
   const correlativeCode = body.correlativeCode == null || body.correlativeCode === "" ? null : body.correlativeCode;

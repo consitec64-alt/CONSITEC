@@ -20,5 +20,5 @@ export type CertificateSalePayload = {
   salespersonId: string;
   amount: number;
   saleDate: string;
-  status: "SCHEDULED" | "EXECUTED" | "INVOICED";
+  status: "SCHEDULED" | "PAID" | "INVOICED" | "PAID_WITHOUT_INVOICE";
 };
