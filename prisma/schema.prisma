@@ -79,6 +79,12 @@ model Instructor {
   groupedServices Service[] @relation("ServiceInstructors")
 }
 
+model SctrPolicy {
+  id           String @id @default("shared")
+  sctrStartsAt DateTime
+  sctrEndsAt   DateTime
+}
+
 model Course {
   quotations Quotation[] @relation("QuotationCourses")
   id               String            @id @default(cuid())
