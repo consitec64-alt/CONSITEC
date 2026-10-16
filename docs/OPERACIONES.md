@@ -104,17 +104,22 @@ crea ni modifica otro servicio, como antes.
 
 ## Disponibilidad de instructores
 
-Al seleccionar fechas, el formulario comprueba todos los instructores y marca
-**no disponible** a quienes ya tienen otro servicio en cualquiera de esas fechas.
-Editar el propio servicio no genera un conflicto consigo mismo. Si cambias las
-fechas y el instructor seleccionado pasa a estar ocupado, aparece una advertencia.
+Al seleccionar fechas y horas, el formulario comprueba todos los instructores y
+marca **no disponible** a quienes tienen un servicio con horario superpuesto.
+Por ejemplo, 09:00–12:00 permite otro servicio desde las 12:00; 11:00–13:00
+genera un conflicto. Editar el propio servicio no genera conflicto consigo mismo.
+El aviso se actualiza al cambiar una fecha o cualquiera de las horas.
 
-La API vuelve a comprobar disponibilidad al guardar y devuelve un conflicto con
-el instructor y la fecha. Las reservas del mismo instructor se serializan en
-PostgreSQL para impedir dos asignaciones simultáneas al mismo día. La regla es
-por día completo: los horarios calculan duración, pero no permiten reservar
-dos servicios del mismo instructor en el mismo día. Instructor sigue
-siendo opcional y puedes guardar un servicio sin asignarlo.
+La API vuelve a comprobar disponibilidad al crear, editar, convertir una cotización
+y restaurar desde Papelera. Las reservas del mismo instructor se serializan en
+PostgreSQL para impedir asignaciones simultáneas con cruces de horarios.
+Si alguna jornada no tiene horario (incluidos registros históricos), reserva el
+día completo. El descanso no libera una franja: se reserva de inicio a fin.
+Puedes guardar un servicio sin asignar instructor.
+
+La consulta `/api/instructors/availability` acepta listas paralelas de `date`,
+`startTime` y `endTime`. Sin horas conserva la consulta por día completo.
+Validación de intervalos: `node --import tsx scripts/instructor-availability-check.ts`.
 
 ## Resumen mensual por comercial
 

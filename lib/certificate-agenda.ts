@@ -10,7 +10,7 @@ export async function syncCertificateAgenda(tx: Prisma.TransactionClient, sale: 
  if(!eligible){if(before&&!before.deletedAt){const after=await tx.service.update({where:{id:before.id},data:{deletedAt:new Date()},include:{dates:true,courses:true}});await audit(tx,actor,'SERVICE','TRASH',before,after);}return;}
  const data={company:sale.customerName,amount:sale.amount,serviceDate:sale.saleDate,status:sale.status==='INVOICED'?'INVOICED' as const:'SCHEDULED' as const,invoicedAt:sale.invoicedAt,certificatesOnly:true,correlativeCode:sale.correlativeCode,courseId:sale.courseId,salespersonId:sale.salespersonId,deletedAt:null};
  await assertMonthsOpen(tx,data);
- if(before){const instructorIds=[...new Set([before.instructorId,...before.instructors.map(i=>i.id)].filter((id):id is string=>!!id))];await assertInstructorsAvailable(tx,instructorIds,[sale.saleDate],before.id);}
+ if(before){const instructorIds=[...new Set([before.instructorId,...before.instructors.map(i=>i.id)].filter((id):id is string=>!!id))];await assertInstructorsAvailable(tx,instructorIds,[{date:sale.saleDate}],before.id);}
  const after=before?await tx.service.update({where:{id:before.id},data:{...data,courses:{set:courseIds.map(id=>({id}))},dates:{deleteMany:{},create:{date:sale.saleDate}}},include:{courses:true,dates:true}}):await tx.service.create({data:{...data,certificateSaleId:sale.id,courses:{connect:courseIds.map(id=>({id}))},dates:{create:{date:sale.saleDate}}},include:{courses:true,dates:true}});
  await audit(tx,actor,'SERVICE',before?'UPDATE':'CREATE',before,after);
 }
