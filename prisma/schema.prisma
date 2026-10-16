@@ -19,6 +19,7 @@ enum ServiceStatus {
   EXECUTED
   INVOICED
   PAID
+  PAID_WITHOUT_INVOICE
 }
 
 enum CustomerType {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { BookOpen, Building2, CalendarDays, ChevronDown, UserRound } from 'lucide-react';
+import { certificateStatusLabels, PAYMENT_WITHOUT_INVOICE } from '@/lib/certificate-status';
 import { draftSessions } from '@/lib/service-draft';
 import { modalityLabel } from '@/lib/class-modality';
 import type { Meta } from '@/lib/ui-types';
@@ -43,7 +44,7 @@ export default function RecordEditor({ formRef, kind, courses, instructors, comm
   const courseNames = values.courseIds.map(id => courses.find(course => course.id === id)?.name).filter(Boolean);
   const instructorNames = values.instructorIds.map(id => instructors.find(instructor => instructor.id === id)?.name).filter(Boolean);
   const amount = Number(values.amount);
-  const status = { SCHEDULED: kind === 'sale' ? 'Pendiente' : 'Programado', EXECUTED: 'Ejecutado', INVOICED: 'Facturado', PAID: 'Pagado' }[values.status] || 'Por definir';
+  const status = (kind === 'sale' ? certificateStatusLabels[values.status] : { SCHEDULED: 'Programado', EXECUTED: 'Ejecutado', INVOICED: 'Facturado' }[values.status]) || 'Por definir';
   return <div className="record-editor">
     <div className="record-editor-content">
       <div className="record-editor-fields" ref={fields}>{children}</div>
@@ -56,7 +57,7 @@ export default function RecordEditor({ formRef, kind, courses, instructors, comm
           {kind === 'service' ? sessions.length ? sessions.map((session, index) => <div className="record-summary-item" key={index}><CalendarDays size={16} aria-hidden="true" /><div>{dateLabel(session.date)}<small>{session.startTime && session.endTime ? `${session.startTime}–${session.endTime}` : 'Sin horario definido'}{values.modality === 'MIXED' && session.modality ? ` · ${modalityLabel(session.modality)}` : ''}</small></div></div>) : <p className="record-summary-empty">Sin fechas registradas</p> : <div className="record-summary-item"><CalendarDays size={16} aria-hidden="true" /><span>{dateLabel(values.saleDate)}</span></div>}
           {kind === 'service' && <div className="record-summary-item"><UserRound size={16} aria-hidden="true" /><span>{instructorNames.join(' · ') || 'Sin instructor asignado'}</span></div>}
           <div className="record-summary-facts"><div><span>Comercial</span><strong>{values.commercial || 'Sin asignar'}</strong></div></div>
-          <div className="record-summary-total"><span>Importe total</span><strong>{new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(Number.isFinite(amount) ? amount : 0)}</strong><small>{kind === 'service' ? 'Un importe para todas las jornadas.' : 'Un importe para todos los cursos.'}</small></div>
+          <div className="record-summary-total"><span>Importe total</span><strong>{new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(Number.isFinite(amount) ? amount : 0)}</strong><small>{kind === 'sale' && values.status === PAYMENT_WITHOUT_INVOICE ? 'No suma a facturación ni a los totales de certificados.' : kind === 'service' ? 'Un importe para todas las jornadas.' : 'Un importe para todos los cursos.'}</small></div>
         </div></details>
       </aside>
     </div>

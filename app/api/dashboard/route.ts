@@ -1,3 +1,4 @@
+import { countsForCertificateRevenue } from '@/lib/certificate-status';
 import { executePastServices } from "@/lib/service-status";
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
 
     const services = await prisma.service.findMany({
       where: agendaWhere(start, end),
-      include: { salesperson: true, course: true, courses: true, instructor: true, instructors: true, location: true, dates: { orderBy: { date: "asc" } } }
+      include: { certificateSale: { select: { status: true } }, salesperson: true, course: true, courses: true, instructor: true, instructors: true, location: true, dates: { orderBy: { date: "asc" } } }
     });
 
     const certificateSales = await prisma.certificateSale.findMany({
@@ -39,7 +40,7 @@ export async function GET(req: Request) {
     ].filter(Boolean)).size;
     // Allocate the estimated amount once, in the month of the first date, even when the
     // same service appears on multiple agenda days or continues next month.
-    const billingServices = services.filter(s => s.serviceDate && s.serviceDate >= start && s.serviceDate < end);
+    const billingServices = services.filter(s => s.serviceDate && s.serviceDate >= start && s.serviceDate < end && (!s.certificateSale || countsForCertificateRevenue(s.certificateSale)));
     // Certificate-only agenda entries are scheduling copies; certificate revenue
     // is counted from company certificate sales, never from those copies.
     const [invoicedServices, invoicedCertificates] = await Promise.all([

@@ -36,3 +36,23 @@ La autoría se obtiene del evento de creación del historial, no de la última e
 La consulta requiere sesión y respeta el alcance existente: servicios y certificados compartidos; cotizaciones propias del comercial para vendedores, todo el equipo para administradores; historial según sus permisos. No se entregan correos de acceso, contraseñas, preferencias ni información de sesiones. Los perfiles se cargan únicamente al abrirlos, sin peticiones por cada fila de las tablas. No requiere migraciones ni servicios adicionales.
 
 Comprobación local: `SMOKE_BASE_URL=http://127.0.0.1:3073 node scripts/record-profiles-smoke.mjs` contra una instancia local preparada. El script usa datos temporales y los elimina al terminar.
+
+## Pago sin factura
+
+Este estado está disponible exclusivamente en las ventas de certificados, tanto
+para empresas como para personas naturales. La venta conserva su importe y sigue
+visible en el listado, el filtro por estado, el resumen, el historial y la
+papelera. No suma en los importes de Personas naturales, Empresas ni Total de la
+selección, ni en la facturación estimada o el total facturado del panel.
+
+Las copias de agenda de empresas mayores a S/700 conservan su importe y las
+reglas de programación existentes. El estimado consulta el estado de la venta
+vinculada para excluir su importe cuando es Pago sin factura. Los estados de
+servicios no incorporan esta opción. Cambiar desde Facturado borra su fecha de
+facturación; volver a Facturado aplica las reglas habituales.
+
+La migración `20261016170000_certificate_payment_without_invoice` añade
+`PAID_WITHOUT_INVOICE` al enum compartido de almacenamiento. Debe aplicarse con
+`npm run prisma:deploy` antes de usar el nuevo estado. No modifica ventas
+existentes. Validación sin acceso a una base real:
+`node --import tsx scripts/check-certificate-payment.ts`.
