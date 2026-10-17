@@ -1,6 +1,6 @@
 import { assignedItems } from './date-assignments';
 import { dayModality, modalityLabel } from './class-modality';
-import { classHours } from './class-hours';
+import { sessionInstructionalMinutes } from './class-hours';
 export type InstructorRegisterRow = {
   id: string; serviceId: string; instructorId: string; confirmed: boolean; date: string; instructor: string; company: string; courses: string[];
   modality: string; location: string; instructionalMinutes: number | null;
@@ -9,8 +9,8 @@ export const registerMonth = (date: string) => new Intl.DateTimeFormat('es-PE', 
 export const registerDate = (date: string) => date.split('-').reverse().join('/');
 
 type Named = { id: string; name: string };
-type RegisterDay = { date: Date; startTime?: string | null; endTime?: string | null; modality?: string | null; courseIds?: string[]; instructorIds?: string[] };
-type RegisterService = { id: string; company: string; modality?: string | null; serviceDate: Date | null; dates: RegisterDay[]; course: Named; courses: Named[]; instructor: Named | null; instructors: Named[]; location: { department: string; district: string } | null; registerConfirmations?: {date:string;instructorId:string;confirmed:boolean}[] };
+type RegisterDay = { reportedInstructionalMinutes?: number | null; date: Date; startTime?: string | null; endTime?: string | null; modality?: string | null; courseIds?: string[]; instructorIds?: string[] };
+type RegisterService = { importedLocation?: string | null; id: string; company: string; modality?: string | null; serviceDate: Date | null; dates: RegisterDay[]; course: Named; courses: Named[]; instructor: Named | null; instructors: Named[]; location: { department: string; district: string } | null; registerConfirmations?: {date:string;instructorId:string;confirmed:boolean}[] };
 export function instructorRegisterRows(services: RegisterService[], { start, end, modality, courseId, instructorId }: { start: Date; end: Date; modality?: string; courseId?: string; instructorId?: string }): InstructorRegisterRow[] {
   return services.flatMap(service => {
     const days = service.dates.length ? service.dates : service.serviceDate ? [{ date:service.serviceDate }] : [];
@@ -23,8 +23,8 @@ export function instructorRegisterRows(services: RegisterService[], { start, end
         id:`${service.id}:${date}:${instructor.id}`, serviceId:service.id, instructorId:instructor.id, date,
         confirmed:!!service.registerConfirmations?.some(c => c.date === date && c.instructorId === instructor.id && c.confirmed),
         instructor:instructor.name, company:service.company, courses:courses.map(course=>course.name),
-        modality:modalityLabel(dailyModality), location:dailyModality === 'VIRTUAL' ? 'Virtual' : service.location ? `${service.location.department} / ${service.location.district}` : 'Sin registrar',
-        instructionalMinutes:day.startTime && day.endTime ? classHours(day.startTime,day.endTime)?.instructionalMinutes ?? null : null,
+        modality:modalityLabel(dailyModality), location:dailyModality === 'VIRTUAL' ? 'Virtual' : service.location ? `${service.location.department} / ${service.location.district}` : service.importedLocation || 'Sin registrar',
+        instructionalMinutes:sessionInstructionalMinutes(day),
       }));
     });
   }).sort((a,b)=>a.date.localeCompare(b.date)||a.instructor.localeCompare(b.instructor,'es')||a.company.localeCompare(b.company,'es')||a.id.localeCompare(b.id));

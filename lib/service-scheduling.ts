@@ -24,6 +24,7 @@ export function datesWhere(days: Date[]): Prisma.ServiceWhereInput {
   }) };
 }
 export class InstructorUnavailable extends Error {}
+export class ImportedServiceInTrash extends Error {}
 export async function assertInstructorsAvailable(tx: Prisma.TransactionClient, instructorIds: string[], sessions: InstructorSession[], exclude?: string) {
   if (!sessions.length) return;
   // Lock in a consistent order to prevent deadlocks for overlapping teams.
@@ -44,7 +45,7 @@ export async function assertInstructorsAvailable(tx: Prisma.TransactionClient, i
     }
   }
 }
-export async function writeService(body: Record<string, unknown>, id?: string, userId?: string, quotationId?: string) {
+export async function writeService(body: Record<string, unknown>, id?: string, userId?: string, quotationId?: string, source?: { key: string; location: string | null }) {
   const actor = await currentUser();
   if (!actor || actor.role === "SUPERVISOR") throw new InvalidRecord("Debes iniciar sesión");
   return prisma.$transaction(async tx => {
@@ -54,6 +55,12 @@ export async function writeService(body: Record<string, unknown>, id?: string, u
     if (quotation && quotation.status !== 'ACCEPTED') throw new QuotationError('Primero marca la cotización como Aceptada',409);
     if (quotation) body = {...body,company:quotation.company,amount:String(quotation.amount),courseIds:quotation.courses.map(c=>c.id),modality:quotation.modality ?? body.modality,certificatesOnly:false,status:'SCHEDULED'};
     const { dates, sessions, courseIds, instructorIds, requestedInvoiceDate, ...data } = serviceInput(body);
+    if (source) {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`service-import:${source.key}`}))::text`;
+      const imported = await tx.service.findUnique({where:{importKey:source.key},include:serviceInclude});
+      if (imported?.deletedAt) throw new ImportedServiceInTrash('Esta fila ya fue importada y está en la papelera. Restaura el servicio antes de volver a importarla.');
+      if (imported) return imported;
+    }
     if (!data.certificatesOnly) data.status = scheduledServiceStatus(data.status, dates) as typeof data.status;
     if (id) await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))::text`;
     const existing = id ? await tx.service.findUniqueOrThrow({ where: { id, deletedAt: null }, include: serviceInclude }) : undefined;
@@ -67,7 +74,7 @@ export async function writeService(body: Record<string, unknown>, id?: string, u
     await assertInstructorsAvailable(tx, instructorIds, sessions, id);
     if (duplicates.length && body.allowDuplicate !== true) throw new PossibleDuplicate(duplicates);
     const saved = id ? await tx.service.update({ where: { id }, data: { ...data, salespersonId, invoicedAt, instructors: {set:instructorIds.map(id=>({id}))}, courses: { set: courseIds.map(id => ({ id })) }, dates: { deleteMany: {}, create: sessions } }, include: serviceInclude })
-    : await tx.service.create({ data: { ...data, salespersonId, invoicedAt, instructors: {connect:instructorIds.map(id=>({id}))}, courses: { connect: courseIds.map(id => ({ id })) }, dates: { create: sessions } }, include: serviceInclude });
+    : await tx.service.create({ data: { ...data, ...(source ? {importKey:source.key,importedLocation:source.location} : {}), salespersonId, invoicedAt, instructors: {connect:instructorIds.map(id=>({id}))}, courses: { connect: courseIds.map(id => ({ id })) }, dates: { create: sessions } }, include: serviceInclude });
     if (existing) {
       const oldDays = existing.dates.length ? existing.dates : existing.serviceDate ? [{date:existing.serviceDate,courseIds:[],instructorIds:[]}] : [];
       const oldCourses = (existing.courses.length ? existing.courses : [existing.course]);

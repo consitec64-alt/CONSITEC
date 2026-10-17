@@ -116,6 +116,8 @@ model Location {
 }
 
 model Service {
+  importKey String? @unique
+  importedLocation String?
   certificateSaleId String? @unique
   certificateSale CertificateSale? @relation(fields: [certificateSaleId], references: [id], onDelete: SetNull)
   quotation Quotation?
@@ -191,6 +193,7 @@ model CertificateSale {
 }
 
 model ServiceDay {
+  reportedInstructionalMinutes Int?
   courseIds String[] @default([])
   instructorIds String[] @default([])
   modality  ClassModality?
