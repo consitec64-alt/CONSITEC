@@ -5,8 +5,8 @@ export type Meta = {
   emoExpiresAt?: string | null; sctr?: boolean; sctrStartsAt?: string | null; sctrEndsAt?: string | null; carModel?: string | null; carPlate?: string | null;
 };
 export type Service = {
-  id: string; certificateSaleId?:string|null; company: string; correlativeCode: string | null; travelMode: 'NONE' | 'PLANE' | 'BUS';
-  amount: string; invoicedAt?: string | null; serviceDate: string | null; dates?: { courseIds?: string[]; instructorIds?: string[]; modality?: 'VIRTUAL' | 'IN_PERSON' | null; date: string; startTime?: string | null; endTime?: string | null }[]; modality?: 'VIRTUAL' | 'IN_PERSON' | 'MIXED' | null; certificatesOnly: boolean;
+  id: string; importedLocation?: string | null; certificateSaleId?:string|null; company: string; correlativeCode: string | null; travelMode: 'NONE' | 'PLANE' | 'BUS';
+  amount: string; invoicedAt?: string | null; serviceDate: string | null; dates?: { reportedInstructionalMinutes?: number | null; courseIds?: string[]; instructorIds?: string[]; modality?: 'VIRTUAL' | 'IN_PERSON' | null; date: string; startTime?: string | null; endTime?: string | null }[]; modality?: 'VIRTUAL' | 'IN_PERSON' | 'MIXED' | null; certificatesOnly: boolean;
   status: string; courses?: Meta[]; course: Meta; instructor: Meta | null; instructors?: Meta[]; location: Meta | null; salesperson: Meta | null;
 };
 export const serviceDays = (service: Service) => [...new Set([service.serviceDate, ...(service.dates ?? []).map(d => d.date)].filter((d): d is string => !!d).map(d => d.slice(0, 10)))].sort();

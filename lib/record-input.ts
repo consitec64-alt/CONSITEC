@@ -83,12 +83,14 @@ export function serviceInput(body: Record<string, unknown>) {
     const startTime = session?.startTime || null, endTime = session?.endTime || null;
     if ((startTime || endTime) && (typeof startTime !== "string" || typeof endTime !== "string" || !classHours(startTime, endTime))) throw new InvalidRecord("Usa horas de inicio y fin válidas (24 horas); el fin debe ser posterior al inicio");
     if (modality === 'MIXED' && !isDayModality(session?.modality)) throw new InvalidRecord(`Selecciona Virtual o Presencial para la fecha ${day.toISOString().slice(0, 10)}`);
+    const reported = session?.reportedInstructionalMinutes;
+    if (reported != null && (typeof reported !== 'number' || !Number.isInteger(reported) || reported < 1 || reported > 1440)) throw new InvalidRecord('La duración importada debe estar entre 1 y 1440 minutos');
     const assigned = (key: 'courseIds' | 'instructorIds', general: string[]) => {
       const ids = session?.[key] === undefined ? [] : selectedIds(session[key], key === 'courseIds' ? 'Cursos de la fecha' : 'Instructores de la fecha', true);
       if (ids.some(id => !general.includes(id))) throw new InvalidRecord('Las asignaciones por fecha deben pertenecer a los cursos e instructores del servicio');
       return ids;
     };
-    return { courseIds: assigned('courseIds', courseIds), instructorIds: assigned('instructorIds', instructorIds), date: day, startTime: startTime as string | null, endTime: endTime as string | null,
+    return { reportedInstructionalMinutes: startTime || endTime ? null : reported as number | undefined ?? null, courseIds: assigned('courseIds', courseIds), instructorIds: assigned('instructorIds', instructorIds), date: day, startTime: startTime as string | null, endTime: endTime as string | null,
       modality: (modality === 'MIXED' ? session!.modality : modality) as ClassModality | null };
   });
   return { ...common({ ...body, status: body.status || "SCHEDULED", courseId: courseIds[0] }, true), courseIds, company: text(body.company, "Cliente"), correlativeCode: correlativeCode as string | null,

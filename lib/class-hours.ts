@@ -10,3 +10,9 @@ export function classHours(startTime: string, endTime: string) {
 export function durationLabel(minutes: number) {
   return `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60} min` : ''}`;
 }
+
+// A duration from a report is independent of the clock interval. Actual times take precedence.
+export function sessionInstructionalMinutes(session: { startTime?: string | null; endTime?: string | null; reportedInstructionalMinutes?: number | null }) {
+  if (session.startTime || session.endTime) return classHours(session.startTime || '', session.endTime || '')?.instructionalMinutes ?? null;
+  return session.reportedInstructionalMinutes ?? null;
+}
